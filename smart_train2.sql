@@ -226,7 +226,7 @@ CREATE TABLE IF NOT EXISTS `train_speed_realtime` (
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uniq_segment_time` (`segment`,`created_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=20907 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=20907 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;	
 
 -- Dumping data for table smart_train.train_speed_realtime: ~16,290 rows (approximately)
 INSERT INTO `train_speed_realtime` (`id`, `segment`, `speed`, `created_at`) VALUES

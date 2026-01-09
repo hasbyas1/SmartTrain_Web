@@ -1,5 +1,6 @@
 // ==========================================
 // 🔧 Konfigurasi MQTT HiveMQ Cloud
+// IN-MEMORY VERSION - Data real-time tanpa simpan database
 // ==========================================
 const mqtt = require("mqtt");
 const { sequelize } = require("./models");
@@ -10,26 +11,33 @@ const mqttUser = "Device02";
 const mqttPass = "Device02";
 
 // Topics
-const topicSpeed = "smartTrain/speedometer";
-const topicPalang = "smartTrain/barrier";
+const topicSpeedometer = "smartTrain/speedometer";
+const topicTelemetry = "smartTrain/Telemetry_batch";
+const topicLocation = "smartTrain/location";
+const topicBarrier = "smartTrain/barrier";
 const topicCamera = "smartTrain/camera";
-const topicTelemetry = "smartTrain/telemetry_batch";
 
 // ==========================================
-// 🧠 Realtime Dedup Cache
+// 🧠 IN-MEMORY STORAGE (tidak di database)
+// ==========================================
+let currentLocation = { titik: "Unknown", timestamp: null };
+let currentSegmentSpeed = { id: null, speed: null, timestamp: null };
+
+// Export untuk diakses dari index.js
+module.exports.getLocationData = () => currentLocation;
+module.exports.getSegmentData = () => currentSegmentSpeed;
+
+// ==========================================
+// 🧠 Cache & Queue System
 // ==========================================
 const lastRealtimeCache = new Map();
-
-// ==========================================
-// 🛡️ Queue System & Processing Flags
-// ==========================================
-let palangQueue = Promise.resolve();
+let barrierQueue = Promise.resolve();
 let cameraQueue = Promise.resolve();
 
-let isPalangProcessing = false;
+let isBarrierProcessing = false;
 let isCameraProcessing = false;
 
-let lastPalangStatus = null;
+let lastBarrierStatus = null;
 let lastCameraStatus = null;
 
 // ==========================================
@@ -44,14 +52,15 @@ const mqttClient = mqtt.connect(mqttServer, {
 mqttClient.on("connect", () => {
   console.log("📡 Terhubung ke HiveMQ!");
   mqttClient.subscribe(
-    [topicSpeed, topicPalang, topicCamera, topicTelemetry],
+    [topicSpeedometer, topicTelemetry, topicLocation, topicBarrier, topicCamera],
     (err) => {
       if (!err) {
         console.log("✅ Subscribe berhasil:");
-        console.log(" - " + topicSpeed);
-        console.log(" - " + topicPalang);
-        console.log(" - " + topicCamera);
+        console.log(" - " + topicSpeedometer);
         console.log(" - " + topicTelemetry);
+        console.log(" - " + topicLocation);
+        console.log(" - " + topicBarrier);
+        console.log(" - " + topicCamera);
       }
     }
   );
@@ -63,112 +72,127 @@ mqttClient.on("connect", () => {
 mqttClient.on("message", async (topic, message) => {
   try {
     const data = JSON.parse(message.toString());
+    const timestamp = new Date();
 
     // ======================================================
-    // 🚆 KECEPATAN RATA-RATA
+    // 🚆 SPEEDOMETER
     // ======================================================
-    if (topic === topicSpeed) {
-      const timestamp = new Date();
+    if (topic === topicSpeedometer) {
+      // Tipe "segmen" - SIMPAN DI MEMORY SAJA
+      if (data.tipe === "segmen") {
+        const segmentId = data.id;
+        const speed = data.kecepatan_s;
 
-      if (data.hasOwnProperty("kecepatan_r")) {
-        console.log(`📥 RATA-RATA diterima → ${data.kecepatan_r} km/jam`);
-        console.log(`⏱️  Waktu total: ${data.waktu_total || "N/A"} detik`);
+        // Update in-memory storage
+        currentSegmentSpeed = {
+          id: segmentId,
+          speed: speed,
+          timestamp: timestamp
+        };
 
-        const sql = `
-          INSERT INTO train_speed (speed, created_at)
-          VALUES (?, ?)
-        `;
+        console.log(`📊 SEGMEN ${segmentId} → ${speed} cm/s (in-memory only)`);
+      }
+      // Tipe "rata_rata" - SIMPAN KE DATABASE
+      else if (data.tipe === "rata_rata") {
+        const avgSpeed = data.kecepatan_r;
+
+        console.log(`📥 RATA-RATA → ${avgSpeed} cm/s`);
 
         try {
-          await sequelize.query(sql, {
-            replacements: [data.kecepatan_r, timestamp],
-          });
+          await sequelize.query(
+            "INSERT INTO train_speed (speed, created_at) VALUES (?, ?)",
+            {
+              replacements: [avgSpeed, timestamp],
+            }
+          );
           console.log("💾 RATA-RATA tersimpan ke DB!");
         } catch (err) {
           console.error("❌ Error insert rata-rata:", err);
         }
-      } else if (data.hasOwnProperty("kecepatan_s")) {
-        console.log(
-          `📊 Segmen ${data.id} → ${data.kecepatan_s} km/jam (Realtime UI only)`
-        );
-      } else {
-        console.log("⚠️ Data format tidak dikenal:", data);
       }
 
       return;
     }
 
     // ======================================================
-    // 🚆 KECEPATAN REALTIME (STRONG DEDUP)
+    // 🚆 TELEMETRY_BATCH - SIMPAN KE DATABASE
     // ======================================================
-    // if (topic === topicTelemetry) {
-    //   let payload;
-    //   try {
-    //     payload = JSON.parse(message.toString());
-    //   } catch {
-    //     return;
-    //   }
+    if (topic === topicTelemetry) {
+      if (!data.speed || typeof data.speed !== "object") return;
 
-    //   if (!payload.speed || typeof payload.speed !== "object") return;
+      const secondBucket = Math.floor(Date.now() / 1000);
+      const createdAt = new Date(secondBucket * 1000);
 
-    //   const secondBucket = Math.floor(Date.now() / 1000);
-    //   const createdAt = new Date(secondBucket * 1000);
+      const inserts = [];
 
-    //   const inserts = [];
+      for (const [segment, speedRaw] of Object.entries(data.speed)) {
+        const speed = Number(speedRaw);
+        if (Number.isNaN(speed)) continue;
 
-    //   for (const [segment, speedRaw] of Object.entries(payload.speed)) {
-    //     const speed = Number(speedRaw);
-    //     if (Number.isNaN(speed)) continue;
+        const cacheKey = `${segment}_${secondBucket}`;
 
-    //     const cacheKey = `${segment}_${secondBucket}`;
+        if (lastRealtimeCache.has(cacheKey)) continue;
 
-    //     if (lastRealtimeCache.has(cacheKey)) continue;
+        lastRealtimeCache.set(cacheKey, true);
+        inserts.push([segment, speed, createdAt]);
+      }
 
-    //     lastRealtimeCache.set(cacheKey, true);
-    //     inserts.push([segment, speed, createdAt]);
-    //   }
+      if (inserts.length === 0) return;
 
-    //   if (inserts.length === 0) return;
+      try {
+        await sequelize.query(
+          `INSERT INTO train_speed_realtime (segment, speed, created_at) VALUES ?`,
+          {
+            replacements: [inserts],
+          }
+        );
 
-    //   try {
-    //     await sequelize.query(
-    //       `INSERT INTO train_speed_realtime (segment, speed, created_at) VALUES ?`,
-    //       {
-    //         replacements: [inserts],
-    //       }
-    //     );
+        console.log(`📈 Telemetry saved: ${inserts.length} segments`);
+      } catch (err) {
+        console.error("❌ Telemetry insert error:", err);
+      }
 
-    //     console.log("📈 Telemetry saved:", inserts.length);
-    //   } catch (err) {
-    //     console.error("❌ Telemetry insert error:", err);
-    //   }
-
-    //   return;
-    // }
+      return;
+    }
 
     // ======================================================
-    // 🚧 PALANG → QUEUE SYSTEM
+    // 📍 LOCATION - SIMPAN DI MEMORY SAJA
     // ======================================================
-    if (topic === topicPalang) {
+    if (topic === topicLocation) {
+      const titik = data.titik;
+
+      // Update in-memory storage
+      currentLocation = {
+        titik: titik,
+        timestamp: timestamp
+      };
+
+      console.log(`📍 LOCATION: ${titik} (in-memory only)`);
+      return;
+    }
+
+    // ======================================================
+    // 🚧 BARRIER (PALANG) - SIMPAN KE DATABASE
+    // ======================================================
+    if (topic === topicBarrier) {
       const currentStatus = data.status;
 
-      console.log(`📥 PALANG request received: ${currentStatus}`);
+      console.log(`📥 BARRIER request received: ${currentStatus}`);
 
-      if (isPalangProcessing) {
-        console.log(`⚠️ PALANG: Already processing, request IGNORED`);
+      if (isBarrierProcessing) {
+        console.log(`⚠️ BARRIER: Already processing, request IGNORED`);
         return;
       }
 
-      palangQueue = palangQueue.then(async () => {
-        isPalangProcessing = true;
+      barrierQueue = barrierQueue.then(async () => {
+        isBarrierProcessing = true;
 
         try {
-          const timestamp = new Date();
           await new Promise((resolve) => setTimeout(resolve, 50));
 
-          if (currentStatus === lastPalangStatus) {
+          if (currentStatus === lastBarrierStatus) {
             console.log(
-              `⚠️ PALANG: Status sama dengan cache (${currentStatus}), SKIP`
+              `⚠️ BARRIER: Status sama dengan cache (${currentStatus}), SKIP`
             );
             return;
           }
@@ -182,14 +206,14 @@ mqttClient.on("message", async (topic, message) => {
             lastRecord[0].status === currentStatus
           ) {
             console.log(
-              `⚠️ PALANG: Status sama dengan DB (${currentStatus}), SKIP`
+              `⚠️ BARRIER: Status sama dengan DB (${currentStatus}), SKIP`
             );
-            lastPalangStatus = currentStatus;
+            lastBarrierStatus = currentStatus;
             return;
           }
 
           console.log(
-            `🚧 PALANG: Insert status ${currentStatus} at ${timestamp.toISOString()}`
+            `🚧 BARRIER: Insert status ${currentStatus} at ${timestamp.toISOString()}`
           );
 
           await sequelize.query(
@@ -199,12 +223,12 @@ mqttClient.on("message", async (topic, message) => {
             }
           );
 
-          console.log("💾 PALANG inserted successfully!");
-          lastPalangStatus = currentStatus;
+          console.log("💾 BARRIER inserted successfully!");
+          lastBarrierStatus = currentStatus;
         } catch (err) {
-          console.error("❌ PALANG queue error:", err);
+          console.error("❌ BARRIER queue error:", err);
         } finally {
-          isPalangProcessing = false;
+          isBarrierProcessing = false;
         }
       });
 
@@ -212,7 +236,7 @@ mqttClient.on("message", async (topic, message) => {
     }
 
     // ======================================================
-    // 📸 CAMERA → QUEUE SYSTEM
+    // 📸 CAMERA - SIMPAN KE DATABASE
     // ======================================================
     if (topic === topicCamera) {
       const currentStatus = data.status;
@@ -228,7 +252,6 @@ mqttClient.on("message", async (topic, message) => {
         isCameraProcessing = true;
 
         try {
-          const timestamp = new Date();
           await new Promise((resolve) => setTimeout(resolve, 50));
 
           if (currentStatus === lastCameraStatus) {

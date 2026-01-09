@@ -2,67 +2,155 @@ import React, { useState, useEffect } from "react";
 import Sidebar from "../components/AdminSidebar";
 import Navbar from "../components/AdminNavbar";
 import axios from "axios";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { useMQTT } from "../hooks/useMQTT";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
-
-// ==========================================
-// 🔧 KONVERSI: km/h → cm/s
-// 1 km/h = 27.7778 cm/s
-// ==========================================
-const kmhToCms = (kmh) => {
-  return kmh * 27.7778;
-};
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.71:4000";
 
 export default function AdminDashboard() {
-  // States untuk data MQTT
-  const [trainSpeed, setTrainSpeed] = useState(null);
-  const [speedHistory, setSpeedHistory] = useState([]);
-  const [realtimeSpeed, setRealtimeSpeed] = useState([]);
+  // States untuk data
+  const [speedHistory, setSpeedHistory] = useState([]); // History rata-rata untuk grafik
+  const [realtimeSpeed, setRealtimeSpeed] = useState([]); // Realtime untuk grafik
+  const [trainLocation, setTrainLocation] = useState({ titik: "Unknown" }); // Keberadaan kereta - DARI MQTT
+  const [segmentSpeed, setSegmentSpeed] = useState({ id: null, speed: null }); // Kecepatan per segmen - DARI MQTT
   const [palangStatus, setPalangStatus] = useState("Loading...");
   const [cameraStatus, setCameraStatus] = useState("Loading...");
-  
-  // States untuk loading & error
+
+  // States UI
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
-  // Filter untuk speed history (default 5 menit)
-  const [timeFilter, setTimeFilter] = useState("5m");
+  const [timeFilter, setTimeFilter] = useState("1m");
 
   // ==========================================
-  // 📡 FETCH DATA FROM API (sourced from MQTT)
+  // 📡 MQTT CONNECTION - untuk Kecepatan Per Segmen & Keberadaan Kereta
   // ==========================================
+  const { messages: mqttMessages, isConnected: isMQTTConnected } = useMQTT([
+    "smartTrain/speedometer",
+    "smartTrain/location"
+  ]);
 
-  // Fetch Latest Train Speed
-  const fetchLatestSpeed = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/train/latest`);
-      setTrainSpeed(response.data);
-    } catch (err) {
-      console.error("Error fetching latest speed:", err);
+  // Update trainLocation ketika ada message dari MQTT topic location
+  useEffect(() => {
+    const msg = mqttMessages["smartTrain/location"];
+    if (msg) {
+      // Gunakan timestamp baru setiap message agar state selalu update
+      setTrainLocation({ ...msg, _ts: Date.now() });
+      console.log("📍 Train Location updated from MQTT:", msg);
     }
-  };
+  }, [JSON.stringify(mqttMessages["smartTrain/location"])]);
 
-  // Fetch Speed History (untuk chart)
-  const fetchSpeedHistory = async (filter = "5m") => {
+  // Update segmentSpeed ketika ada message dari MQTT topic speedometer dengan tipe 'segmen'
+  useEffect(() => {
+    const data = mqttMessages["smartTrain/speedometer"];
+    if (data && data.tipe === "segmen") {
+      // Tambahkan _ts agar setiap message baru pasti update
+      setSegmentSpeed({
+        id: data.id,
+        speed: data.kecepatan_s,
+        timestamp: new Date().toISOString(),
+        _ts: Date.now()
+      });
+      console.log("📊 Segment Speed updated from MQTT:", data);
+    }
+  }, [JSON.stringify(mqttMessages["smartTrain/speedometer"])]);
+
+  // ==========================================
+  // 📡 FETCH DATA FROM API
+  // ==========================================
+
+  // Fetch Speed History (Rata-rata untuk grafik)
+  const fetchSpeedHistory = async (filter = "1m") => {
     try {
       const response = await axios.get(
         `${API_URL}/train-speed/history?filter=${filter}`
       );
-      setSpeedHistory(response.data);
+      
+      // Format data untuk recharts
+      const formattedData = response.data.map((item) => ({
+        time: new Date(item.created_at).toLocaleTimeString("id-ID", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit"
+        }),
+        speed: parseFloat(item.speed) || 0,
+        timestamp: new Date(item.created_at).getTime()
+      }));
+      
+      setSpeedHistory(formattedData);
     } catch (err) {
       console.error("Error fetching speed history:", err);
     }
   };
 
-  // Fetch Realtime Speed per Segment
+  // Fetch Realtime Speed (untuk grafik realtime)
   const fetchRealtimeSpeed = async () => {
     try {
       const response = await axios.get(`${API_URL}/train/realtime`);
-      setRealtimeSpeed(response.data);
+      
+      // Format data untuk recharts
+      // Group by time dan aggregate speeds
+      const dataMap = {};
+      
+      response.data.forEach((item) => {
+        const time = new Date(item.created_at).toLocaleTimeString("id-ID", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit"
+        });
+        
+        if (!dataMap[time]) {
+          dataMap[time] = {
+            time: time,
+            speed: 0,
+            count: 0,
+            timestamp: new Date(item.created_at).getTime()
+          };
+        }
+        
+        dataMap[time].speed += parseFloat(item.speed) || 0;
+        dataMap[time].count += 1;
+      });
+      
+      // Calculate average and sort by timestamp
+      const formattedData = Object.values(dataMap)
+        .map(item => ({
+          time: item.time,
+          speed: item.count > 0 ? item.speed / item.count : 0,
+          timestamp: item.timestamp
+        }))
+        .sort((a, b) => a.timestamp - b.timestamp);
+      
+      // Pastikan ada minimal 1 data point (bisa 0 cm/s)
+      if (formattedData.length === 0) {
+        formattedData.push({
+          time: new Date().toLocaleTimeString("id-ID", {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit"
+          }),
+          speed: 0,
+          timestamp: Date.now()
+        });
+      }
+      
+      setRealtimeSpeed(formattedData);
     } catch (err) {
       console.error("Error fetching realtime speed:", err);
+      // Set default data point jika error
+      setRealtimeSpeed([{
+        time: new Date().toLocaleTimeString("id-ID", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit"
+        }),
+        speed: 0,
+        timestamp: Date.now()
+      }]);
     }
   };
+
+  // ❌ DIHAPUS: Fetch Train Location - SEKARANG DARI MQTT LANGSUNG
+  // ❌ DIHAPUS: Fetch Segment Speed - SEKARANG DARI MQTT LANGSUNG
 
   // Fetch Palang Status
   const fetchPalangStatus = async () => {
@@ -90,13 +178,12 @@ export default function AdminDashboard() {
     }
   };
 
-  // Update Palang Status (POST to API → MQTT)
+  // Update Palang Status
   const updatePalangStatus = async (newStatus) => {
     try {
       await axios.post(`${API_URL}/palang/update`, {
         status: newStatus,
       });
-      // Refresh status setelah update
       setTimeout(() => fetchPalangStatus(), 500);
     } catch (err) {
       console.error("Error updating palang:", err);
@@ -104,13 +191,12 @@ export default function AdminDashboard() {
     }
   };
 
-  // Update Camera Status (POST to API → MQTT)
+  // Update Camera Status
   const updateCameraStatus = async (newStatus) => {
     try {
       await axios.post(`${API_URL}/camera/update`, {
         status: newStatus,
       });
-      // Refresh status setelah update
       setTimeout(() => fetchCameraStatus(), 500);
     } catch (err) {
       console.error("Error updating camera:", err);
@@ -123,13 +209,14 @@ export default function AdminDashboard() {
   // ==========================================
 
   useEffect(() => {
-    // Initial fetch
     const fetchAllData = async () => {
       setLoading(true);
       try {
         await Promise.all([
-          fetchLatestSpeed(),
+          fetchSpeedHistory(timeFilter),
           fetchRealtimeSpeed(),
+          // ❌ DIHAPUS: fetchTrainLocation() - SEKARANG DARI MQTT
+          // ❌ DIHAPUS: fetchSegmentSpeed() - SEKARANG DARI MQTT
           fetchPalangStatus(),
           fetchCameraStatus(),
         ]);
@@ -143,21 +230,18 @@ export default function AdminDashboard() {
 
     fetchAllData();
 
-    // Auto refresh setiap 3 detik
+    // Auto refresh every 3 seconds
     const interval = setInterval(() => {
-      fetchLatestSpeed();
-      fetchRealtimeSpeed();
-      fetchPalangStatus();
-      fetchCameraStatus();
+      fetchSpeedHistory(timeFilter); // Refresh grafik rata-rata
+      fetchRealtimeSpeed(); // Refresh grafik realtime
+      // ❌ DIHAPUS: fetchTrainLocation() - SEKARANG DARI MQTT REAL-TIME
+      // ❌ DIHAPUS: fetchSegmentSpeed() - SEKARANG DARI MQTT REAL-TIME
+      fetchPalangStatus(); // Refresh palang
+      fetchCameraStatus(); // Refresh camera
     }, 3000);
 
     return () => clearInterval(interval);
-  }, []);
-
-  // Refresh history saat filter berubah
-  useEffect(() => {
-    fetchSpeedHistory(timeFilter);
-  }, [timeFilter]);
+  }, [timeFilter]); // Re-run when filter changes
 
   // ==========================================
   // 🎨 RENDER UI
@@ -176,10 +260,8 @@ export default function AdminDashboard() {
 
   return (
     <div className="flex min-h-screen bg-gray-100">
-      {/* Sidebar */}
       <Sidebar />
 
-      {/* Main content */}
       <div className="md:ml-72 flex flex-col flex-1">
         <Navbar />
 
@@ -196,36 +278,66 @@ export default function AdminDashboard() {
             <h1 className="text-3xl font-bold text-gray-800">
               Dashboard Monitoring
             </h1>
-            <p className="text-gray-600 mt-1">
-              Real-time data dari MQTT sensors
-            </p>
+            <p className="text-gray-600 mt-1">Real-time data SmartTrain</p>
           </div>
 
-          {/* Grid Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            {/* Card: Kecepatan Kereta */}
+          {/* Top Grid: 4 Cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+            {/* Card: Kecepatan Per Segmen (dari MQTT) */}
             <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-700">
-                  Kecepatan Kereta
+                  Kecepatan Per Segmen
                 </h3>
                 <div className="bg-blue-100 p-3 rounded-full">
-                  <i className="fa fa-train text-blue-600 text-xl"></i>
+                  <i className="fa fa-tachometer text-blue-600 text-xl"></i>
                 </div>
               </div>
-              <div className="text-4xl font-bold text-blue-600">
-                {trainSpeed 
-                  ? `${kmhToCms(trainSpeed.speed).toFixed(2)} cm/s` 
-                  : "-- cm/s"}
+              <div className="text-center">
+                {segmentSpeed && segmentSpeed.id ? (
+                  <>
+                    <div className="text-sm text-gray-500 mb-2">
+                      Segmen {segmentSpeed.id}
+                    </div>
+                    <div className="text-4xl font-bold text-blue-600">
+                      {segmentSpeed.speed ? segmentSpeed.speed.toFixed(2) : "0.00"} cm/s
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-sm text-gray-500 mb-2">
+                      Waiting...
+                    </div>
+                    <div className="text-4xl font-bold text-gray-400">
+                      -- cm/s
+                    </div>
+                  </>
+                )}
               </div>
-              <p className="text-sm text-gray-500 mt-2">
-                {trainSpeed
-                  ? `Update: ${new Date(trainSpeed.created_at).toLocaleTimeString("id-ID")}`
-                  : "Waiting for data..."}
-              </p>
-              <p className="text-xs text-gray-400 mt-1">
-                {trainSpeed && `(${trainSpeed.speed.toFixed(1)} km/h)`}
-              </p>
+            </div>
+
+            {/* Card: Keberadaan Kereta (dari MQTT) */}
+            <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-700">
+                  Keberadaan Kereta
+                </h3>
+                <div className="bg-green-100 p-3 rounded-full">
+                  <i className="fa fa-map-marker text-green-600 text-xl"></i>
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-4xl font-bold text-green-600">
+                  {trainLocation && trainLocation.titik !== "Unknown"
+                    ? trainLocation.titik
+                    : "Unknown"}
+                </div>
+                {trainLocation && trainLocation.timestamp && (
+                  <p className="text-sm text-gray-500 mt-2">
+                    {new Date(trainLocation.timestamp).toLocaleTimeString("id-ID")}
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Card: Status Palang */}
@@ -242,30 +354,32 @@ export default function AdminDashboard() {
                 <div>
                   <div
                     className={`text-2xl font-bold ${
-                      palangStatus === "Aktif"
+                      palangStatus === "Terbuka"
                         ? "text-green-600"
+                        : palangStatus === "Tertutup"
+                        ? "text-red-600"
                         : "text-gray-600"
                     }`}
                   >
                     {palangStatus}
                   </div>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Status palang saat ini
-                  </p>
+                  <p className="text-sm text-gray-500 mt-1">Status palang</p>
                 </div>
                 <button
                   onClick={() =>
                     updatePalangStatus(
-                      palangStatus === "Aktif" ? "Nonaktif" : "Aktif"
+                      palangStatus === "Terbuka" ? "Tertutup" : "Terbuka"
                     )
                   }
                   className={`relative inline-flex h-12 w-24 items-center rounded-full transition-colors duration-300 focus:outline-none ${
-                    palangStatus === "Aktif" ? "bg-green-500" : "bg-gray-300"
+                    palangStatus === "Terbuka" ? "bg-green-500" : "bg-red-500"
                   }`}
                 >
                   <span
                     className={`inline-block h-8 w-8 transform rounded-full bg-white transition-transform duration-300 ${
-                      palangStatus === "Aktif" ? "translate-x-14" : "translate-x-2"
+                      palangStatus === "Terbuka"
+                        ? "translate-x-14"
+                        : "translate-x-2"
                     }`}
                   />
                 </button>
@@ -293,9 +407,7 @@ export default function AdminDashboard() {
                   >
                     {cameraStatus}
                   </div>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Status camera monitoring
-                  </p>
+                  <p className="text-sm text-gray-500 mt-1">Status camera</p>
                 </div>
                 <button
                   onClick={() =>
@@ -309,7 +421,9 @@ export default function AdminDashboard() {
                 >
                   <span
                     className={`inline-block h-8 w-8 transform rounded-full bg-white transition-transform duration-300 ${
-                      cameraStatus === "Aktif" ? "translate-x-14" : "translate-x-2"
+                      cameraStatus === "Aktif"
+                        ? "translate-x-14"
+                        : "translate-x-2"
                     }`}
                   />
                 </button>
@@ -317,108 +431,159 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Speed History Chart */}
-          <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-gray-700">
-                History Kecepatan (cm/s)
-              </h3>
-              <div className="flex gap-2">
-                {["1m", "5m", "10m", "30m"].map((filter) => (
-                  <button
-                    key={filter}
-                    onClick={() => setTimeFilter(filter)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                      timeFilter === filter
-                        ? "bg-[#EB2525] text-white"
-                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
-                  >
-                    {filter}
-                  </button>
-                ))}
+          {/* 2 Grafik LINE CHART */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            {/* Grafik 1: Kecepatan Rata-rata (LINE) */}
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold text-gray-700">
+                  Grafik Kecepatan Rata-rata (cm/s)
+                </h3>
+                <div className="flex gap-2">
+                  {["1m", "5m", "10m", "30m"].map((filter) => (
+                    <button
+                      key={filter}
+                      onClick={() => setTimeFilter(filter)}
+                      className={`px-3 py-1 rounded-lg text-sm font-medium transition ${
+                        timeFilter === filter
+                          ? "bg-[#EB2525] text-white"
+                          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                      }`}
+                    >
+                      {filter}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="h-64">
+                {speedHistory && speedHistory.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={speedHistory}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        dataKey="time" 
+                        tick={{ fontSize: 12 }}
+                        angle={-45}
+                        textAnchor="end"
+                        height={60}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 12 }}
+                        label={{ value: 'cm/s', angle: -90, position: 'insideLeft' }}
+                      />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#1f2937', color: '#fff', borderRadius: '8px' }}
+                        formatter={(value) => [`${value.toFixed(2)} cm/s`, 'Kecepatan']}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="speed" 
+                        stroke="#3b82f6" 
+                        strokeWidth={2}
+                        dot={{ fill: '#3b82f6', r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center w-full h-full text-gray-400">
+                    No data available - waiting for data...
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Simple Bar Chart */}
-            <div className="h-64 flex items-end justify-around gap-2">
-              {speedHistory.length > 0 ? (
-                speedHistory.map((data, index) => {
-                  const maxSpeed = Math.max(...speedHistory.map((d) => d.speed));
-                  const height = (data.speed / maxSpeed) * 100;
-                  const speedCms = kmhToCms(data.speed);
-                  
-                  return (
-                    <div
-                      key={index}
-                      className="flex-1 flex flex-col items-center"
-                    >
-                      <div
-                        className="w-full bg-[#EB2525] rounded-t-lg hover:bg-red-600 transition-all relative group"
-                        style={{ height: `${height}%` }}
-                      >
-                        <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
-                          {speedCms.toFixed(2)} cm/s
-                          <br />
-                          ({data.speed.toFixed(1)} km/h)
+            {/* Grafik 2: Kecepatan Real Time (LINE) */}
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h3 className="text-xl font-semibold text-gray-700 mb-6">
+                Grafik Kecepatan Real Time (cm/s)
+              </h3>
+
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={realtimeSpeed}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="time" 
+                      tick={{ fontSize: 12 }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 12 }}
+                      label={{ value: 'cm/s', angle: -90, position: 'insideLeft' }}
+                    />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#1f2937', color: '#fff', borderRadius: '8px' }}
+                      formatter={(value) => [`${value.toFixed(2)} cm/s`, 'Kecepatan']}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="speed" 
+                      stroke="#10b981" 
+                      strokeWidth={2}
+                      dot={{ fill: '#10b981', r: 4 }}
+                      activeDot={{ r: 6 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+
+          {/* Live Camera Stream */}
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-gray-700">
+                Camera Stream
+              </h3>
+              {cameraStatus === "Aktif" ? (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+                  <span className="w-2 h-2 bg-red-600 rounded-full mr-2 animate-pulse"></span>
+                  LIVE
+                </span>
+              ) : (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600">
+                  disconnected
+                </span>
+              )}
+            </div>
+            
+            <div className="w-full bg-gray-900 rounded-lg overflow-hidden" style={{ aspectRatio: '16/9' }}>
+              {cameraStatus === "Aktif" ? (
+                <img
+                  src={`${API_URL}/camera/stream`}
+                  alt="Live Camera Feed"
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    console.error("Camera stream error");
+                    e.target.style.display = "none";
+                    e.target.parentElement.innerHTML = `
+                      <div class="flex items-center justify-center w-full h-full text-gray-400">
+                        <div class="text-center">
+                          <i class="fa fa-video-slash text-4xl mb-2"></i>
+                          <p>Camera feed unavailable</p>
                         </div>
                       </div>
-                      <p className="text-xs text-gray-500 mt-2">
-                        {new Date(data.created_at).toLocaleTimeString("id-ID", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </p>
-                    </div>
-                  );
-                })
+                    `;
+                  }}
+                />
               ) : (
-                <div className="flex items-center justify-center w-full h-full text-gray-400">
-                  No data available
+                <div className="flex items-center justify-center w-full h-full text-gray-500">
+                  <div className="text-center">
+                    <i className="fa fa-video-slash text-5xl mb-3 opacity-50"></i>
+                    <p className="text-lg">No feed</p>
+                    <p className="text-sm mt-1">Camera is offline</p>
+                  </div>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Realtime Speed per Segment */}
+          {/* Train Map */}
           <div className="bg-white rounded-xl shadow-lg p-6">
-            <h3 className="text-xl font-semibold text-gray-700 mb-6">
-              Kecepatan Realtime per Segment (cm/s)
-            </h3>
-            
-            {realtimeSpeed.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                {realtimeSpeed.slice(0, 12).map((data, index) => {
-                  const speedCms = kmhToCms(data.speed);
-                  
-                  return (
-                    <div
-                      key={index}
-                      className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 text-center border border-blue-200"
-                    >
-                      <div className="text-sm font-semibold text-blue-800 mb-1">
-                        {data.segment}
-                      </div>
-                      <div className="text-2xl font-bold text-blue-600">
-                        {speedCms.toFixed(2)}
-                      </div>
-                      <div className="text-xs text-blue-600">cm/s</div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        ({data.speed.toFixed(1)} km/h)
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center text-gray-400 py-8">
-                No realtime data available
-              </div>
-            )}
-          </div>
-
-          {/* Train Map (placeholder) */}
-          <div className="bg-white rounded-xl shadow-lg p-6 mt-6">
             <h3 className="text-xl font-semibold text-gray-700 mb-4">
               Train Map
             </h3>
