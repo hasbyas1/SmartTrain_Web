@@ -101,50 +101,50 @@ mqttClient.on("message", async (topic, message) => {
     // ======================================================
     // 🚆 KECEPATAN REALTIME (STRONG DEDUP)
     // ======================================================
-    if (topic === topicTelemetry) {
-      let payload;
-      try {
-        payload = JSON.parse(message.toString());
-      } catch {
-        return;
-      }
+    // if (topic === topicTelemetry) {
+    //   let payload;
+    //   try {
+    //     payload = JSON.parse(message.toString());
+    //   } catch {
+    //     return;
+    //   }
 
-      if (!payload.speed || typeof payload.speed !== "object") return;
+    //   if (!payload.speed || typeof payload.speed !== "object") return;
 
-      const secondBucket = Math.floor(Date.now() / 1000);
-      const createdAt = new Date(secondBucket * 1000);
+    //   const secondBucket = Math.floor(Date.now() / 1000);
+    //   const createdAt = new Date(secondBucket * 1000);
 
-      const inserts = [];
+    //   const inserts = [];
 
-      for (const [segment, speedRaw] of Object.entries(payload.speed)) {
-        const speed = Number(speedRaw);
-        if (Number.isNaN(speed)) continue;
+    //   for (const [segment, speedRaw] of Object.entries(payload.speed)) {
+    //     const speed = Number(speedRaw);
+    //     if (Number.isNaN(speed)) continue;
 
-        const cacheKey = `${segment}_${secondBucket}`;
+    //     const cacheKey = `${segment}_${secondBucket}`;
 
-        if (lastRealtimeCache.has(cacheKey)) continue;
+    //     if (lastRealtimeCache.has(cacheKey)) continue;
 
-        lastRealtimeCache.set(cacheKey, true);
-        inserts.push([segment, speed, createdAt]);
-      }
+    //     lastRealtimeCache.set(cacheKey, true);
+    //     inserts.push([segment, speed, createdAt]);
+    //   }
 
-      if (inserts.length === 0) return;
+    //   if (inserts.length === 0) return;
 
-      try {
-        await sequelize.query(
-          `INSERT INTO train_speed_realtime (segment, speed, created_at) VALUES ?`,
-          {
-            replacements: [inserts],
-          }
-        );
+    //   try {
+    //     await sequelize.query(
+    //       `INSERT INTO train_speed_realtime (segment, speed, created_at) VALUES ?`,
+    //       {
+    //         replacements: [inserts],
+    //       }
+    //     );
 
-        console.log("📈 Telemetry saved:", inserts.length);
-      } catch (err) {
-        console.error("❌ Telemetry insert error:", err);
-      }
+    //     console.log("📈 Telemetry saved:", inserts.length);
+    //   } catch (err) {
+    //     console.error("❌ Telemetry insert error:", err);
+    //   }
 
-      return;
-    }
+    //   return;
+    // }
 
     // ======================================================
     // 🚧 PALANG → QUEUE SYSTEM
