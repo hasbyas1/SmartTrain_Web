@@ -551,7 +551,7 @@ export default function AdminDashboard() {
               )}
             </div>
             
-            <div className="w-full bg-gray-900 rounded-lg overflow-hidden" style={{ aspectRatio: '16/9' }}>
+            <div className="w-full bg-gray-900 rounded-lg overflow-hidden" style={{ width: '1280px', height: '575px' }}>
               {cameraStatus === "Aktif" ? (
                 <img
                   src={`${API_URL}/camera/stream`}
