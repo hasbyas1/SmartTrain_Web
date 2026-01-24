@@ -14,7 +14,10 @@ export default function AdminDashboard() {
   const [trainLocation, setTrainLocation] = useState({ titik: "Unknown" }); // Keberadaan kereta - DARI MQTT
   const [segmentSpeed, setSegmentSpeed] = useState({ id: null, speed: null }); // Kecepatan per segmen - DARI MQTT
   const [palangStatus, setPalangStatus] = useState("Loading...");
+  const [palangLoading, setPalangLoading] = useState(false);
   const [cameraStatus, setCameraStatus] = useState("Loading...");
+  const [cameraLoading, setCameraLoading] = useState(false);
+  const [cameraError, setCameraError] = useState(false);
 
   // States UI
   const [loading, setLoading] = useState(true);
@@ -171,6 +174,7 @@ export default function AdminDashboard() {
       const response = await axios.get(`${API_URL}/camera`);
       if (response.data && response.data.length > 0) {
         setCameraStatus(response.data[0].status);
+        setCameraError(false);
       }
     } catch (err) {
       console.error("Error fetching camera status:", err);
@@ -180,27 +184,46 @@ export default function AdminDashboard() {
 
   // Update Palang Status
   const updatePalangStatus = async (newStatus) => {
+    setPalangLoading(true); // Start loading
+    
     try {
       await axios.post(`${API_URL}/palang/update`, {
         status: newStatus,
       });
       setTimeout(() => fetchPalangStatus(), 500);
+      
+      // Cooldown 11 detik
+      setTimeout(() => {
+        setPalangLoading(false);
+      }, 11000); // 11 detik
+      
     } catch (err) {
       console.error("Error updating palang:", err);
       alert("Gagal mengupdate status palang");
+      setPalangLoading(false); // Reset jika error
     }
   };
 
   // Update Camera Status
   const updateCameraStatus = async (newStatus) => {
+    setCameraLoading(true); // Start loading
+  
     try {
       await axios.post(`${API_URL}/camera/update`, {
         status: newStatus,
       });
+      setCameraError(false);
       setTimeout(() => fetchCameraStatus(), 500);
+      
+      // Cooldown 1 detik
+      setTimeout(() => {
+        setCameraLoading(false);
+      }, 1000); // 1 detik
+      
     } catch (err) {
       console.error("Error updating camera:", err);
       alert("Gagal mengupdate status camera");
+      setCameraLoading(false); // Reset jika error
     }
   };
 
@@ -352,16 +375,16 @@ export default function AdminDashboard() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <div
-                    className={`text-2xl font-bold ${
-                      palangStatus === "Terbuka"
-                        ? "text-green-600"
-                        : palangStatus === "Tertutup"
-                        ? "text-red-600"
-                        : "text-gray-600"
-                    }`}
-                  >
-                    {palangStatus}
+                  <div className={`text-2xl font-bold ${
+                    palangLoading
+                      ? "text-gray-400"
+                      : palangStatus === "Terbuka"
+                      ? "text-green-600"
+                      : palangStatus === "Tertutup"
+                      ? "text-red-600"
+                      : "text-gray-600"
+                  }`}>
+                    {palangLoading ? "Menunggu..." : palangStatus}
                   </div>
                   <p className="text-sm text-gray-500 mt-1">Status palang</p>
                 </div>
@@ -371,17 +394,20 @@ export default function AdminDashboard() {
                       palangStatus === "Terbuka" ? "Tertutup" : "Terbuka"
                     )
                   }
+                  disabled={palangLoading}
                   className={`relative inline-flex h-12 w-24 items-center rounded-full transition-colors duration-300 focus:outline-none ${
-                    palangStatus === "Terbuka" ? "bg-green-500" : "bg-red-500"
+                    palangLoading
+                      ? "bg-gray-400 cursor-not-allowed opacity-50"
+                      : palangStatus === "Terbuka"
+                      ? "bg-green-500"
+                      : "bg-red-500"
                   }`}
                 >
-                  <span
-                    className={`inline-block h-8 w-8 transform rounded-full bg-white transition-transform duration-300 ${
-                      palangStatus === "Terbuka"
-                        ? "translate-x-14"
-                        : "translate-x-2"
-                    }`}
-                  />
+                  <span className={`inline-block h-8 w-8 transform rounded-full bg-white transition-transform duration-300 ${
+                    palangStatus === "Terbuka"
+                      ? "translate-x-2"
+                      : "translate-x-14"
+                  }`}/>
                 </button>
               </div>
             </div>
@@ -398,14 +424,14 @@ export default function AdminDashboard() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <div
-                    className={`text-2xl font-bold ${
-                      cameraStatus === "Aktif"
-                        ? "text-green-600"
-                        : "text-gray-600"
-                    }`}
-                  >
-                    {cameraStatus}
+                  <div className={`text-2xl font-bold ${
+                    cameraLoading
+                      ? "text-gray-400"
+                      : cameraStatus === "Aktif"
+                      ? "text-green-600"
+                      : "text-gray-600"
+                  }`}>
+                    {cameraLoading ? "Menunggu..." : cameraStatus}
                   </div>
                   <p className="text-sm text-gray-500 mt-1">Status camera</p>
                 </div>
@@ -415,17 +441,20 @@ export default function AdminDashboard() {
                       cameraStatus === "Aktif" ? "Nonaktif" : "Aktif"
                     )
                   }
+                  disabled={cameraLoading}
                   className={`relative inline-flex h-12 w-24 items-center rounded-full transition-colors duration-300 focus:outline-none ${
-                    cameraStatus === "Aktif" ? "bg-green-500" : "bg-gray-300"
+                    cameraLoading
+                      ? "bg-gray-400 cursor-not-allowed opacity-50"
+                      : cameraStatus === "Aktif"
+                      ? "bg-green-500"
+                      : "bg-gray-300"
                   }`}
                 >
-                  <span
-                    className={`inline-block h-8 w-8 transform rounded-full bg-white transition-transform duration-300 ${
-                      cameraStatus === "Aktif"
-                        ? "translate-x-14"
-                        : "translate-x-2"
-                    }`}
-                  />
+                  <span className={`inline-block h-8 w-8 transform rounded-full bg-white transition-transform duration-300 ${
+                    cameraStatus === "Aktif"
+                      ? "translate-x-14"
+                      : "translate-x-2"
+                  }`}/>
                 </button>
               </div>
             </div>
@@ -553,23 +582,27 @@ export default function AdminDashboard() {
             
             <div className="w-full bg-gray-900 rounded-lg overflow-hidden" style={{ width: '1280px', height: '575px' }}>
               {cameraStatus === "Aktif" ? (
-                <img
-                  src={`${API_URL}/camera/stream`}
-                  alt="Live Camera Feed"
-                  className="w-full h-full object-contain"
-                  onError={(e) => {
-                    console.error("Camera stream error");
-                    e.target.style.display = "none";
-                    e.target.parentElement.innerHTML = `
-                      <div class="flex items-center justify-center w-full h-full text-gray-400">
-                        <div class="text-center">
-                          <i class="fa fa-video-slash text-4xl mb-2"></i>
-                          <p>Camera feed unavailable</p>
-                        </div>
-                      </div>
-                    `;
-                  }}
-                />
+                cameraError ? (
+                  // Tampilkan error
+                  <div className="flex items-center justify-center w-full h-full text-gray-400">
+                    <div className="text-center">
+                      <i className="fa fa-video-slash text-4xl mb-2"></i>
+                      <p>Camera feed unavailable</p>
+                    </div>
+                  </div>
+                ) : (
+                  // Tampilkan stream
+                  <img
+                    key={cameraStatus}
+                    src={`${API_URL}/camera/stream`}
+                    alt="Live Camera Feed"
+                    className="w-full h-full object-contain"
+                    onError={() => {
+                      console.error("Camera stream error");
+                      setCameraError(true); // ← Pakai state, BUKAN innerHTML!
+                    }}
+                  />
+                )
               ) : (
                 <div className="flex items-center justify-center w-full h-full text-gray-500">
                   <div className="text-center">
