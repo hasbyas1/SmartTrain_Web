@@ -9,12 +9,14 @@ Requirements: Upload all the required Arduino programs (check '../Arduino/Import
 
 6. Terminal
 7. cd/web/backend
-8. "nodemon index" in terminal
+8. npm install
+9. "nodemon index" in terminal
 
-9. New Terminal
-10. cd/web/frontend
-11. "npm start" in terminal
-12. You'll obtain an local IP's or URL which leads to website that've been made. It'll be something like this in the terminal:
+10. New Terminal
+11. cd/web/frontend
+12/ "npm install"
+13. "npm start" in terminal
+14. You'll obtain an local IP's or URL which leads to website that've been made. It'll be something like this in the terminal:
 
 # Local:            http://localhost:3000
 # On Your Network:  http://192.168.56.1:3000 <------------ Pick this URL (Change 3000 into 5000)

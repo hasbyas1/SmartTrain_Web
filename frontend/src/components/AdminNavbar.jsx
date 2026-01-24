@@ -8,12 +8,12 @@ export default function Navbar() {
         <div className="flex flex-col gap-4">
           <div className="flex h-10 justify-end items-center">
             <img
-              alt="Tania Andrew"
-              src="https://images.unsplash.com/photo-1633332755192-727a05c4013d?ixlib=rb-1.2.1&amp;ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&amp;auto=format&amp;fit=crop&amp;w=1480&amp;q=80"
+              alt="Hasby"
+              src="img/team/hasbi.png"
               className="h-16  rounded-full object-cover object-center"
             />
             <div className="ml-2">
-              Tania Andrew
+              Hasby
               <hr className="h-[1.5px] w-full bg-gray-300 border-0" />
               Admin
             </div>

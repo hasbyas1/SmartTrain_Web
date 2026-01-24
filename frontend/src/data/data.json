@@ -131,24 +131,19 @@
   ],
   "Team": [
     {
+      "img": "img/team/hasbi.png",
+      "name": "Muhammad Hasby A",
+      "job": "Wiring, AI Engineer, App Developer"
+    },
+    {
       "img": "img/team/eka.png",
       "name": "Eka Fajar R",
       "job": "Material & Train Design Engineer"
     },
     {
-      "img": "img/team/hasbi.png",
-      "name": "Muhammad Hasby A",
-      "job": "Camera & AI Engineer"
-    },
-    {
       "img": "img/team/dzakiyya.png",
       "name": "Dzakiyya Puteri Aulia",
       "job": "Website Developer"
-    },
-    {
-      "img": "img/team/fariz.png",
-      "name": "Muhammad Fariz A",
-      "job": "Project Manager"
     },
     {
       "img": "img/team/hickam.png",
