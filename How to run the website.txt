@@ -16,13 +16,4 @@ Requirements: Upload all the required Arduino programs (check '../Arduino/Import
 11. cd/web/frontend
 12/ "npm install"
 13. "npm start" in terminal
-14. You'll obtain an local IP's or URL which leads to website that've been made. It'll be something like this in the terminal:
-
-# Local:            http://localhost:3000
-# On Your Network:  http://192.168.56.1:3000 <------------ Pick this URL (Change 3000 into 5000)
-
-13. You'll need that URL of "On Your Network" and will use it on 'web/frontend/.env' for docker (it's like duplicating your website's URL or HTTP API (If this isn't done yet, the live view of the camera won't be shown)
-
-14. As I said... paste the URL of 'On Your Network' and paste it on the second line of the code: REACT_APP_API_URL= http://192.168.12.3:5000
-
-15. Done
+14. Done

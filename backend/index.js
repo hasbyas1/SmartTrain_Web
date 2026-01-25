@@ -322,7 +322,6 @@ app.post("/camera/update", (req, res) => {
 // ==========================================
 // 📹 CAMERA STREAM (NEW - Live Stream Relay)
 // ==========================================
-// ← TAMBAHKAN ENDPOINT BARU INI
 app.get("/camera/stream", async (req, res) => {
   const CAMERA_URL = process.env.CAMERA_URL || "http://192.168.1.187/stream";
   

@@ -15,9 +15,12 @@ export default function AdminDashboard() {
   const [segmentSpeed, setSegmentSpeed] = useState({ id: null, speed: null }); // Kecepatan per segmen - DARI MQTT
   const [palangStatus, setPalangStatus] = useState("Loading...");
   const [palangLoading, setPalangLoading] = useState(false);
+  const [cameraIP, setCameraIP] = useState(null);
+  const [showFeed, setShowFeed] = useState(false);
   const [cameraStatus, setCameraStatus] = useState("Loading...");
   const [cameraLoading, setCameraLoading] = useState(false);
   const [cameraError, setCameraError] = useState(false);
+
 
   // States UI
   const [loading, setLoading] = useState(true);
@@ -29,8 +32,41 @@ export default function AdminDashboard() {
   // ==========================================
   const { messages: mqttMessages, isConnected: isMQTTConnected } = useMQTT([
     "smartTrain/speedometer",
-    "smartTrain/location"
+    "smartTrain/location",
+    "smartTrain/camera/ip"
   ]);
+
+  // Update cameraIP ketika ada message dari MQTT topic camera/ip
+  useEffect(() => {
+    const msg = mqttMessages["smartTrain/camera/ip"];
+    if (msg && msg.ip) {
+      setCameraIP(msg.ip);
+      console.log("📷 Camera IP from MQTT:", msg.ip);
+    }
+  }, [JSON.stringify(mqttMessages["smartTrain/camera/ip"])]);
+
+  // ========== TAMBAH USEEFFECT INI (AUTO-RETRY) ==========
+  useEffect(() => {
+    // Auto-retry: Kalau camera aktif tapi IP masih "waiting...", force re-check setiap 3 detik
+    if (cameraStatus === "Aktif" && (cameraIP === "waiting..." || cameraIP === "offline")) {
+      console.log("🔄 Auto-retry: Checking for latest IP...");
+      
+      const interval = setInterval(() => {
+        // Force trigger useEffect dengan update timestamp
+        const msg = mqttMessages["smartTrain/camera/ip"];
+        if (msg && msg.ip && msg.ip !== "waiting..." && msg.ip !== "offline") {
+          // Dapat IP valid!
+          setCameraIP(msg.ip);
+          console.log("✅ Got valid IP:", msg.ip);
+        } else {
+          console.log("⏳ Still waiting... Current:", msg?.ip || "null");
+        }
+      }, 3000); // Check setiap 3 detik
+      
+      return () => clearInterval(interval);
+    }
+  }, [cameraStatus, cameraIP, mqttMessages]);
+  // ======================================================
 
   // Update trainLocation ketika ada message dari MQTT topic location
   useEffect(() => {
@@ -564,55 +600,177 @@ export default function AdminDashboard() {
 
           {/* Live Camera Stream */}
           <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+            {/* Header dengan Warning Icon */}
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-gray-700">
-                Camera Stream
-              </h3>
-              {cameraStatus === "Aktif" ? (
+              <div className="flex items-center gap-3">
+                <h3 className="text-xl font-semibold text-gray-700">
+                  Camera Stream
+                </h3>
+                
+                {/* Warning Icon - HTTP One-to-One Limitation */}
+                <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-300 rounded-lg px-3 py-1.5">
+                  <i className="fa fa-exclamation-triangle text-yellow-600 text-sm"></i>
+                  <span className="text-xs text-yellow-700 font-medium">
+                    HTTP stream is one-to-one only. Hide feed when not viewing to allow other devices in order to let other devices such as the mobile app access the stream.
+                  </span>
+                </div>
+              </div>
+
+              {/* Live Indicator */}
+              {cameraStatus === "Aktif" && showFeed ? (
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
                   <span className="w-2 h-2 bg-red-600 rounded-full mr-2 animate-pulse"></span>
                   LIVE
                 </span>
               ) : (
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600">
-                  disconnected
+                  {cameraStatus === "Aktif" ? "ready" : "disconnected"}
                 </span>
               )}
             </div>
-            
-            <div className="w-full bg-gray-900 rounded-lg overflow-hidden" style={{ width: '1280px', height: '575px' }}>
+
+            {/* Show/Hide Feed Button (Only when camera active and IP available) */}
+            {cameraStatus === "Aktif" && cameraIP && cameraIP !== "waiting..." && cameraIP !== "offline" && (
+              <div className="mb-4 flex justify-end">
+                <button
+                  onClick={() => {
+                    setShowFeed(!showFeed);
+                    if (showFeed) {
+                      setCameraError(false); // Reset error when hiding
+                    }
+                  }}
+                  className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-medium transition-all duration-200 shadow-sm ${
+                    showFeed
+                      ? "bg-gray-600 hover:bg-gray-700 text-white"
+                      : "bg-blue-600 hover:bg-blue-700 text-white"
+                  }`}
+                >
+                  <i className={`fa ${showFeed ? "fa-eye-slash" : "fa-eye"}`}></i>
+                  {showFeed ? "Hide Feed" : "Show Feed"}
+                </button>
+              </div>
+            )}
+
+            {/* Camera Stream Container */}
+            <div 
+              className="w-full bg-gray-900 rounded-lg overflow-hidden relative" 
+              style={{ height: '575px' }}
+            >
               {cameraStatus === "Aktif" ? (
-                cameraError ? (
-                  // Tampilkan error
+                cameraIP && cameraIP !== "waiting..." && cameraIP !== "offline" ? (  // ← DIGANTI!
+                  showFeed ? (
+                    // ===== SHOW FEED - Display Stream =====
+                    cameraError ? (
+                      <div className="flex items-center justify-center w-full h-full text-gray-400">
+                        <div className="text-center">
+                          <i className="fa fa-video-slash text-5xl mb-3 opacity-50"></i>
+                          <p className="text-lg mb-2">Camera feed unavailable</p>
+                          <p className="text-sm">Trying to connect to: {cameraIP}</p>
+                          <button
+                            onClick={() => {
+                              setCameraError(false);
+                              setShowFeed(false);
+                              setTimeout(() => setShowFeed(true), 100);
+                            }}
+                            className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm"
+                          >
+                            Retry Connection
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <img
+                        key={`camera-stream-${cameraIP}-${showFeed}`}
+                        src={`http://${cameraIP}/stream`}
+                        alt="Live Camera Feed"
+                        className="w-full h-full object-contain"
+                        onError={() => {
+                          console.error("❌ Camera stream error from:", cameraIP);
+                          setCameraError(true);
+                        }}
+                        onLoad={() => {
+                          console.log("✅ Camera stream loaded successfully from:", cameraIP);
+                          setCameraError(false);
+                        }}
+                      />
+                    )
+                  ) : (
+                    // ===== HIDE FEED - Show Placeholder =====
+                    <div className="flex flex-col items-center justify-center w-full h-full text-gray-400">
+                      <i className="fa fa-eye-slash text-7xl mb-5 opacity-40"></i>
+                      <p className="text-xl font-medium mb-2">Feed Hidden</p>
+                      <p className="text-sm text-gray-500">Click "Show Feed" button to view camera</p>
+                      <div className="mt-6 p-4 bg-gray-800 rounded-lg border border-gray-700">
+                        <p className="text-xs text-gray-400 mb-1">Ready to stream from:</p>
+                        <code className="text-sm text-blue-400">{cameraIP}</code>
+                      </div>
+                    </div>
+                  )
+                ) : (
+                  // ===== WAITING FOR IP FROM MQTT =====
                   <div className="flex items-center justify-center w-full h-full text-gray-400">
                     <div className="text-center">
-                      <i className="fa fa-video-slash text-4xl mb-2"></i>
-                      <p>Camera feed unavailable</p>
+                      <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-gray-400 mx-auto mb-4"></div>
+                      <p className="text-lg mb-2">
+                        {cameraIP === "waiting..." ? "Camera Booting..." : "Waiting for Camera IP..."}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {cameraIP === "waiting..." 
+                          ? "ESP32-CAM is starting, please wait 10-20 seconds..."
+                          : "Listening to MQTT topic: smartTrain/camera/ip"
+                        }
+                      </p>
+                      {cameraIP === "waiting..." && (
+                        <p className="text-xs text-gray-600 mt-2">
+                          Current status: {cameraIP}
+                        </p>
+                      )}
                     </div>
                   </div>
-                ) : (
-                  // Tampilkan stream
-                  <img
-                    key={cameraStatus}
-                    src={`${API_URL}/camera/stream`}
-                    alt="Live Camera Feed"
-                    className="w-full h-full object-contain"
-                    onError={() => {
-                      console.error("Camera stream error");
-                      setCameraError(true); // ← Pakai state, BUKAN innerHTML!
-                    }}
-                  />
                 )
               ) : (
+                // ===== CAMERA OFFLINE =====
                 <div className="flex items-center justify-center w-full h-full text-gray-500">
                   <div className="text-center">
-                    <i className="fa fa-video-slash text-5xl mb-3 opacity-50"></i>
-                    <p className="text-lg">No feed</p>
-                    <p className="text-sm mt-1">Camera is offline</p>
+                    <i className="fa fa-video-slash text-6xl mb-4 opacity-30"></i>
+                    <p className="text-xl mb-2">Camera Offline</p>
+                    <p className="text-sm">Turn on camera using the toggle switch above</p>
                   </div>
                 </div>
               )}
             </div>
+
+            {/* Camera Info Box (Only when IP is available) */}
+            {cameraIP && cameraIP !== "waiting..." && cameraIP !== "offline" && (
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600 font-medium">Camera Status:</span>
+                    <span className={`ml-2 font-semibold ${
+                      cameraStatus === "Aktif" ? "text-green-600" : "text-gray-500"
+                    }`}>
+                      {cameraStatus}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 font-medium">Stream Status:</span>
+                    <span className={`ml-2 font-semibold ${
+                      showFeed ? "text-blue-600" : "text-gray-500"
+                    }`}>
+                      {showFeed ? "Active" : "Inactive"}
+                    </span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-gray-600 font-medium">Stream URL:</span>
+                    <div className="mt-1">
+                      <code className="bg-white px-3 py-2 rounded border text-gray-800 text-xs block">
+                        http://{cameraIP}/stream
+                      </code>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Train Map */}
