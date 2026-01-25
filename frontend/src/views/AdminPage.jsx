@@ -7,6 +7,14 @@ import { useMQTT } from "../hooks/useMQTT";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.71:4000";
 
+
+// MQTT Topics (constant untuk prevent reconnect loop)
+const MQTT_TOPICS = [
+  "smartTrain/speedometer",
+  "smartTrain/location",
+  "smartTrain/camera/ip"
+];
+
 export default function AdminDashboard() {
   // States untuk data
   const [speedHistory, setSpeedHistory] = useState([]); // History rata-rata untuk grafik
@@ -30,43 +38,33 @@ export default function AdminDashboard() {
   // ==========================================
   // 📡 MQTT CONNECTION - untuk Kecepatan Per Segmen & Keberadaan Kereta
   // ==========================================
-  const { messages: mqttMessages, isConnected: isMQTTConnected } = useMQTT([
-    "smartTrain/speedometer",
-    "smartTrain/location",
-    "smartTrain/camera/ip"
-  ]);
+  const { messages: mqttMessages, isConnected: isMQTTConnected } = useMQTT(MQTT_TOPICS);
 
   // Update cameraIP ketika ada message dari MQTT topic camera/ip
   useEffect(() => {
     const msg = mqttMessages["smartTrain/camera/ip"];
     if (msg && msg.ip) {
+      // SAMA SEPERTI MOBILE: Langsung set apapun yang diterima!
       setCameraIP(msg.ip);
       console.log("📷 Camera IP from MQTT:", msg.ip);
     }
   }, [JSON.stringify(mqttMessages["smartTrain/camera/ip"])]);
 
-  // ========== TAMBAH USEEFFECT INI (AUTO-RETRY) ==========
+  // AUTO-RETRY: Check IP setiap 3 detik sampai dapat IP valid
   useEffect(() => {
-    // Auto-retry: Kalau camera aktif tapi IP masih "waiting...", force re-check setiap 3 detik
-    if (cameraStatus === "Aktif" && (cameraIP === "waiting..." || cameraIP === "offline")) {
-      console.log("🔄 Auto-retry: Checking for latest IP...");
-      
+    if (cameraStatus === "Aktif" && (cameraIP === "waiting..." || cameraIP === "offline" || !cameraIP)) {
       const interval = setInterval(() => {
-        // Force trigger useEffect dengan update timestamp
         const msg = mqttMessages["smartTrain/camera/ip"];
+        console.log("🔄 Auto-checking IP... Current:", msg?.ip || "null");
         if (msg && msg.ip && msg.ip !== "waiting..." && msg.ip !== "offline") {
-          // Dapat IP valid!
           setCameraIP(msg.ip);
           console.log("✅ Got valid IP:", msg.ip);
-        } else {
-          console.log("⏳ Still waiting... Current:", msg?.ip || "null");
         }
-      }, 3000); // Check setiap 3 detik
+      }, 3000);
       
       return () => clearInterval(interval);
     }
   }, [cameraStatus, cameraIP, mqttMessages]);
-  // ======================================================
 
   // Update trainLocation ketika ada message dari MQTT topic location
   useEffect(() => {
@@ -603,14 +601,14 @@ export default function AdminDashboard() {
             {/* Header dengan Warning Icon */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <h3 className="text-xl font-semibold text-gray-700">
+                <h3 className="text-3xl font-bold text-gray-700">
                   Camera Stream
                 </h3>
                 
                 {/* Warning Icon - HTTP One-to-One Limitation */}
-                <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-300 rounded-lg px-3 py-1.5">
-                  <i className="fa fa-exclamation-triangle text-yellow-600 text-sm"></i>
-                  <span className="text-xs text-yellow-700 font-medium">
+                <div className="flex items-center gap-3 bg-yellow-50 border border-yellow-300 rounded-lg px-5 py-3.5">
+                  <i className="fa fa-exclamation-triangle text-yellow-600 text-xl"></i>
+                  <span className="text-base text-yellow-700 font-bold">
                     HTTP stream is one-to-one only. Hide feed when not viewing to allow other devices in order to let other devices such as the mobile app access the stream.
                   </span>
                 </div>
@@ -618,12 +616,12 @@ export default function AdminDashboard() {
 
               {/* Live Indicator */}
               {cameraStatus === "Aktif" && showFeed ? (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+                <span className="inline-flex items-center px-5 py-3 rounded-full text-xl font-bold bg-red-100 text-red-800">
                   <span className="w-2 h-2 bg-red-600 rounded-full mr-2 animate-pulse"></span>
                   LIVE
                 </span>
               ) : (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600">
+                <span className="inline-flex items-center px-5 py-3 rounded-full text-xl font-bold bg-gray-100 text-gray-600">
                   {cameraStatus === "Aktif" ? "ready" : "disconnected"}
                 </span>
               )}
@@ -639,7 +637,7 @@ export default function AdminDashboard() {
                       setCameraError(false); // Reset error when hiding
                     }
                   }}
-                  className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-medium transition-all duration-200 shadow-sm ${
+                  className={`flex items-center gap-3 px-8 py-4 rounded-lg text-2xl font-bold transition-all duration-200 shadow-sm ${
                     showFeed
                       ? "bg-gray-600 hover:bg-gray-700 text-white"
                       : "bg-blue-600 hover:bg-blue-700 text-white"
@@ -664,15 +662,15 @@ export default function AdminDashboard() {
                       <div className="flex items-center justify-center w-full h-full text-gray-400">
                         <div className="text-center">
                           <i className="fa fa-video-slash text-5xl mb-3 opacity-50"></i>
-                          <p className="text-lg mb-2">Camera feed unavailable</p>
-                          <p className="text-sm">Trying to connect to: {cameraIP}</p>
+                          <p className="text-2xl mb-2">Camera feed unavailable</p>
+                          <p className="text-xl">Trying to connect to: {cameraIP}</p>
                           <button
                             onClick={() => {
                               setCameraError(false);
                               setShowFeed(false);
                               setTimeout(() => setShowFeed(true), 100);
                             }}
-                            className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm"
+                            className="mt-4 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xl"
                           >
                             Retry Connection
                           </button>
@@ -698,11 +696,11 @@ export default function AdminDashboard() {
                     // ===== HIDE FEED - Show Placeholder =====
                     <div className="flex flex-col items-center justify-center w-full h-full text-gray-400">
                       <i className="fa fa-eye-slash text-7xl mb-5 opacity-40"></i>
-                      <p className="text-xl font-medium mb-2">Feed Hidden</p>
-                      <p className="text-sm text-gray-500">Click "Show Feed" button to view camera</p>
+                      <p className="text-3xl font-bold mb-2">Feed Hidden</p>
+                      <p className="text-xl text-gray-500">Click "Show Feed" button to view camera</p>
                       <div className="mt-6 p-4 bg-gray-800 rounded-lg border border-gray-700">
-                        <p className="text-xs text-gray-400 mb-1">Ready to stream from:</p>
-                        <code className="text-sm text-blue-400">{cameraIP}</code>
+                        <p className="text-base text-gray-400 mb-1">Ready to stream from:</p>
+                        <code className="text-xl text-blue-400">{cameraIP}</code>
                       </div>
                     </div>
                   )
@@ -711,17 +709,17 @@ export default function AdminDashboard() {
                   <div className="flex items-center justify-center w-full h-full text-gray-400">
                     <div className="text-center">
                       <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-gray-400 mx-auto mb-4"></div>
-                      <p className="text-lg mb-2">
+                      <p className="text-2xl mb-2">
                         {cameraIP === "waiting..." ? "Camera Booting..." : "Waiting for Camera IP..."}
                       </p>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-xl text-gray-500">
                         {cameraIP === "waiting..." 
                           ? "ESP32-CAM is starting, please wait 10-20 seconds..."
                           : "Listening to MQTT topic: smartTrain/camera/ip"
                         }
                       </p>
                       {cameraIP === "waiting..." && (
-                        <p className="text-xs text-gray-600 mt-2">
+                        <p className="text-base text-gray-600 mt-2">
                           Current status: {cameraIP}
                         </p>
                       )}
@@ -733,8 +731,8 @@ export default function AdminDashboard() {
                 <div className="flex items-center justify-center w-full h-full text-gray-500">
                   <div className="text-center">
                     <i className="fa fa-video-slash text-6xl mb-4 opacity-30"></i>
-                    <p className="text-xl mb-2">Camera Offline</p>
-                    <p className="text-sm">Turn on camera using the toggle switch above</p>
+                    <p className="text-3xl mb-2">Camera Offline</p>
+                    <p className="text-xl">Turn on camera using the toggle switch above</p>
                   </div>
                 </div>
               )}
@@ -743,27 +741,27 @@ export default function AdminDashboard() {
             {/* Camera Info Box (Only when IP is available) */}
             {cameraIP && cameraIP !== "waiting..." && cameraIP !== "offline" && (
               <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-2 gap-4 text-xl">
                   <div>
-                    <span className="text-gray-600 font-medium">Camera Status:</span>
-                    <span className={`ml-2 font-semibold ${
+                    <span className="text-gray-600 font-bold">Camera Status:</span>
+                    <span className={`ml-2 font-bold ${
                       cameraStatus === "Aktif" ? "text-green-600" : "text-gray-500"
                     }`}>
                       {cameraStatus}
                     </span>
                   </div>
                   <div>
-                    <span className="text-gray-600 font-medium">Stream Status:</span>
-                    <span className={`ml-2 font-semibold ${
+                    <span className="text-gray-600 font-bold">Stream Status:</span>
+                    <span className={`ml-2 font-bold ${
                       showFeed ? "text-blue-600" : "text-gray-500"
                     }`}>
                       {showFeed ? "Active" : "Inactive"}
                     </span>
                   </div>
                   <div className="col-span-2">
-                    <span className="text-gray-600 font-medium">Stream URL:</span>
+                    <span className="text-gray-600 font-bold">Stream URL:</span>
                     <div className="mt-1">
-                      <code className="bg-white px-3 py-2 rounded border text-gray-800 text-xs block">
+                      <code className="bg-white px-3 py-2 rounded border text-gray-800 text-base block">
                         http://{cameraIP}/stream
                       </code>
                     </div>
