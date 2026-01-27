@@ -1,4 +1,46 @@
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+
+const API_URL = process.env.REACT_APP_API_URL || "http://192.168.1.93:5000";
+
 export default function Navbar() {
+  const [userData, setUserData] = useState({
+    name: "Loading...",
+    email: "",
+  });
+
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  const fetchUserData = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      
+      if (!token) {
+        console.error("No token found");
+        return;
+      }
+
+      const response = await axios.get(`${API_URL}/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setUserData({
+        name: response.data.name,
+        email: response.data.email,
+      });
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      setUserData({
+        name: "User",
+        email: "",
+      });
+    }
+  };
+
   return (
     <header className="bg-white max-h-32 shadow px-10 py-10 flex justify-between items-center top-0 sticky navbar-default navbar-fixed-top !z-40">
       <div>
@@ -8,12 +50,12 @@ export default function Navbar() {
         <div className="flex flex-col gap-4">
           <div className="flex h-10 justify-end items-center">
             <img
-              alt="Hasby"
-              src="img/team/hasbi.png"
-              className="h-16  rounded-full object-cover object-center"
+              alt={userData.name}
+              src="https://images.unsplash.com/photo-1633332755192-727a05c4013d?ixlib=rb-1.2.1&amp;ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&amp;auto=format&amp;fit=crop&amp;w=1480&amp;q=80"
+              className="h-16 rounded-full object-cover object-center"
             />
             <div className="ml-2">
-              Hasby
+              {userData.name}
               <hr className="h-[1.5px] w-full bg-gray-300 border-0" />
               Admin
             </div>

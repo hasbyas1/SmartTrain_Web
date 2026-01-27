@@ -771,6 +771,18 @@ export default function AdminDashboard() {
             )}
           </div>
 
+          {/* Live Camera Description */}
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <div className="border-l-4 border-red-500 pl-4">
+              <h3 className="text-xl font-bold text-gray-800 mb-3 uppercase">
+                Live Camera
+              </h3>
+              <p className="text-gray-600 leading-relaxed">
+                Here, you'll see the public camera view from across the land. These cameras are installed at railway crossings to monitor and detect any obstacles or vehicles that may be present on the tracks. The camera feed is processed using advanced computer vision method and techniques to identify and classify objects in real-time, allowing for quick and accurate detection of potential hazards. This information can then be used to trigger safety measures, such as activating warning signals or stopping approaching trains, to prevent accidents and ensure the safety of both train passengers and road users.
+              </p>
+            </div>
+          </div>
+
           {/* Train Map */}
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h3 className="text-xl font-semibold text-gray-700 mb-4">

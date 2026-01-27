@@ -13,7 +13,7 @@ export const Navigation = () => {
 
   const menuItems = [
     { name: "Features", href: "#features" },
-    { name: "Live Camera", href: "#about" },
+    // ❌ DIHAPUS: { name: "Live Camera", href: "#about" },
     { name: "Gallery", href: "#services" },
     { name: "Team", href: "#team" },
     { name: "Contact", href: "#contact" },
@@ -71,7 +71,7 @@ export const Navigation = () => {
                   ></span>
                   <span
                     className={`h-0.5 bg-gray-800 transition-all duration-300 ${
-                      isMobileMenuOpen ? "opacity-0" : "opacity-100"
+                      isMobileMenuOpen ? "opacity-0" : ""
                     }`}
                   ></span>
                   <span
@@ -84,14 +84,14 @@ export const Navigation = () => {
 
               {/* Mobile Menu */}
               {isMobileMenuOpen && (
-                <div className="absolute top-full left-0 w-full bg-white shadow-lg z-50">
-                  <ul className="py-2 px-4 space-y-3">
+                <div className="absolute top-full left-0 w-full bg-white shadow-lg z-50 md:hidden">
+                  <ul className="flex flex-col space-y-2 p-4">
                     {menuItems.map((item) => (
-                      <li key={item.name} className="relative">
+                      <li key={item.name}>
                         <a
                           href={item.href}
                           onClick={() => setIsMobileMenuOpen(false)}
-                          className="block py-2 hover:text-[#EB2525] transition duration-200 relative border-b border-gray-100"
+                          className="block py-2 px-4 hover:bg-gray-100 hover:text-[#EB2525] transition duration-200 rounded"
                         >
                           {item.name}
                         </a>
@@ -100,7 +100,7 @@ export const Navigation = () => {
                     <li>
                       <Link
                         to="/login"
-                        className="block bg-[#EB2525] text-white px-4 py-2 rounded uppercase hover:bg-[#991B1B] transition duration-200 text-center"
+                        className="block text-center bg-[#EB2525] text-white px-4 py-2 rounded uppercase hover:bg-[#991B1B] transition duration-200"
                         onClick={() => setIsMobileMenuOpen(false)}
                       >
                         Admin Page

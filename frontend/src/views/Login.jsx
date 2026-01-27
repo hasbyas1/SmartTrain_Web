@@ -65,6 +65,19 @@ export default function Login() {
           Enter your Credentials to access your account
         </p>
 
+        <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg mb-6">
+          <div className="flex items-center">
+            <i className="fa fa-user-circle text-green-500 text-2xl mr-3"></i>
+            <div>
+              <p className="font-semibold text-l">Test Account Available</p>
+              <p className="text-l mt-1">
+                <span className="font-medium">Email:</span> admin@gmail.com | 
+                <span className="font-medium ml-2">Password:</span> admin
+              </p>
+            </div>
+          </div>
+        </div>
+
         {error && <p className="text-red-500 mb-4">{error}</p>}
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -150,7 +163,7 @@ export default function Login() {
       {/* Right section: image */}
       <div className="md:w-1/2 bg-gray-200">
         <img
-          src="img/intro-bg.png"
+          src="img/login-bg2.jpg"
           alt="Login Illustration"
           className="object-cover w-full h-full"
         />

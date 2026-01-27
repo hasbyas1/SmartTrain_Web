@@ -131,7 +131,7 @@
   ],
   "Team": [
     {
-      "img": "img/team/hasbi.png",
+      "img": "img/team/hasby.png",
       "name": "Muhammad Hasby A",
       "job": "Wiring, AI Engineer, App Developer"
     },
@@ -143,10 +143,10 @@
     {
       "img": "img/team/dzakiyya.png",
       "name": "Dzakiyya Puteri Aulia",
-      "job": "Website Developer"
+      "job": "Website Developer Helper"
     },
     {
-      "img": "img/team/hickam.png",
+      "img": "img/team/hickham.png",
       "name": "Hickham Amwala K",
       "job": "Project Manager"
     }
@@ -162,19 +162,19 @@
   },
   "Features": [
     {
-      "icon": "fa fa-camera",
-      "title": "Entity & Object Detection",
-      "text": "The camera detects entities or objects such as humans or vehicles."
-    },
-    {
       "icon": "fa fa-laptop",
       "title": "Website Live View Camera",
       "text": "A secure website that can be accessed to view the surroundings from the camera anywhere in real time."
     },
     {
       "icon": "fa fa-wifi",
-      "title": "Signal Communication Transferring",
-      "text": "The camera will transmit communication signals that can provide warnings to the train in case of danger, especially at intersections."
+      "title": "Wireless Communication and Control System",
+      "text": "Implement a wireless control system for the camera and the barrier from the dedicated control center such as this web and mobile app."
+    },
+    {
+      "icon": "fa fa-camera",
+      "title": "Entity & Object Detection",
+      "text": "The camera detects entities or objects such as humans or vehicles."
     },
     {
       "icon": "fa fa-bolt",
@@ -184,7 +184,7 @@
     {
       "icon": "fa fa-exclamation-triangle",
       "title": "Automatic Train Protection",
-      "text": "Implements an automatic safety system on trains designed to prevent accidents caused by human error, such as exceeding speed limits."
+      "text": "Implements an automatic safety system on trains designed to prevent accidents caused by human error, such as intersection problems."
     }
   ]
 }
