@@ -126,7 +126,18 @@ export const Contact = (props) => {
                 <span>
                   <i className="fa fa-instagram"></i> Instagram
                 </span>{" "}
-                {props.data ? props.data.instagram : "loading"}
+                {props.data ? (
+                  <a 
+                    href="https://www.instagram.com/i.will24/" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="instagram-link"
+                  >
+                    {props.data.instagram}
+                  </a>
+                ) : (
+                  "loading"
+                )}
               </p>
             </div>
           </div>

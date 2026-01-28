@@ -684,3 +684,27 @@ label {
     margin: 50px 0;
   }
 }
+
+.instagram-link {
+  color: rgba(255, 255, 255, 0.7); /* Warna awal */
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.instagram-link:visited {
+  color: rgba(255, 255, 255, 0.7); /* Tetap sama seperti warna awal */
+}
+
+.instagram-link:hover {
+  color: #FFFFFF; /* Putih penuh saat hover */
+  text-decoration: underline;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+  font-weight: 600;
+}
+
+.instagram-link:visited:hover {
+  color: #FFFFFF; /* Putih penuh saat hover meskipun sudah dikunjungi */
+  text-decoration: underline;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+  font-weight: 600;
+}

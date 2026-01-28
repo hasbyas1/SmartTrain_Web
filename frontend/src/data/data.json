@@ -141,14 +141,14 @@
       "job": "Material & Train Design Engineer"
     },
     {
-      "img": "img/team/dzakiyya.png",
-      "name": "Dzakiyya Puteri Aulia",
-      "job": "Website Developer Helper"
-    },
-    {
       "img": "img/team/hickham.png",
       "name": "Hickham Amwala K",
       "job": "Project Manager"
+    },
+    {
+      "img": "img/team/dzakiyya.png",
+      "name": "Dzakiyya Puteri Aulia",
+      "job": "Website Developer Helper"
     }
   ],
   "Contact": {

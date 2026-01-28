@@ -1,0 +1,17 @@
+1. Open VSCode
+2. Make sure Node/Express installed
+3. Make sure React installed
+
+4. DON'T FORGET TO START THE LARAGON/XAMPP LOCALHOST SERVER (APACHE + MYSQL)
+
+5. Terminal
+6. cd/backend
+7. `npm install` in terminal and then enter (only one time)
+8. `nodemon index` in terminal and then enter
+
+11. New Terminal
+12. cd/frontend
+13. `npm install` in terminal and then enter (only one time)
+14. `npm start` in terminal and then enter
+
+15. Done
