@@ -133,7 +133,7 @@
     {
       "img": "img/team/hasby.png",
       "name": "Muhammad Hasby A",
-      "job": "Wiring, AI Engineer, App Developer"
+      "job": "Wiring, AI Engineer, Fullstack App/Web Developer"
     },
     {
       "img": "img/team/eka.png",
@@ -143,12 +143,7 @@
     {
       "img": "img/team/hickham.png",
       "name": "Hickham Amwala K",
-      "job": "Project Manager"
-    },
-    {
-      "img": "img/team/dzakiyya.png",
-      "name": "Dzakiyya Puteri Aulia",
-      "job": "Website Developer Helper"
+      "job": "Project Manager, Train Designer, Diorama Designer"
     }
   ],
   "Contact": {

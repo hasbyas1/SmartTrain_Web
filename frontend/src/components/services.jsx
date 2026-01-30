@@ -15,16 +15,16 @@ export const Services = (props) => {
           {/* Row 1 - Asimetris: Small, Extra Large, Medium, Small */}
           <div className="flex flex-wrap justify-center gap-6">
             <div className="w-72 h-80 bg-white rounded-2xl bg-cover bg-center" 
-                 style={{ backgroundImage: "url('/img/portofolio/01-large.jpg')" }}>
+                 style={{ backgroundImage: "url('/img/gallery/raihan01_1.jpg')" }}>
             </div>
-            <div className="w-[550px] h-80 bg-white rounded-2xl bg-cover bg-center" 
-                 style={{ backgroundImage: "url('/img/portofolio/02-large.jpg')" }}>
+            <div className="w-[400px] h-80 bg-white rounded-2xl bg-cover bg-center" 
+                 style={{ backgroundImage: "url('/img/gallery/team06_1.png')" }}>
             </div>
-            <div className="w-96 h-80 bg-white rounded-2xl bg-cover bg-center" 
-                 style={{ backgroundImage: "url('/img/portofolio/03-large.jpg')" }}>
+            <div className="w-[400px] h-80 bg-white rounded-2xl bg-cover bg-center" 
+                 style={{ backgroundImage: "url('/img/gallery/ai01_07_protWebControl.png')" }}>
             </div>
-            <div className="w-80 h-80 bg-white rounded-2xl bg-cover bg-center" 
-                 style={{ backgroundImage: "url('/img/portofolio/04-large.jpg')" }}>
+            <div className="w-[300px] h-80 bg-white rounded-2xl bg-cover bg-center" 
+                 style={{ backgroundImage: "url('/img/gallery/ai01_06_pythonImplement.png')" }}>
             </div>
           </div>
 
@@ -35,39 +35,58 @@ export const Services = (props) => {
             </div>
             <div className="flex flex-col gap-6">
               <div className="w-80 h-[190px] bg-white rounded-2xl bg-cover bg-center" 
-                style={{ backgroundImage: "url('/img/portofolio/06-large.jpg')" }}>
+                style={{ backgroundImage: "url('/img/gallery/camset03_2.jpg')" }}>
               </div>
               <div className="w-80 h-[190px] bg-transparent rounded-2xl bg-cover bg-center" 
                 style={{ backgroundImage: "url('/img/gallery/Logo01_2.png')" }}>
               </div>
             </div>
             <div className="flex flex-col gap-6">
-              <div className="w-80 h-[105px] bg-transparent rounded-2xl bg-cover bg-center" 
-                style={{ backgroundImage: "url('/img/gallery/Logo01_2.png')" }}>
+              <div className="w-96 h-[135px] bg-transparent rounded-2xl bg-cover bg-center" 
+                style={{ backgroundImage: "url('/img/gallery/boogie02_1.jpg')" }}>
               </div>
               <div className="w-96 h-[250px] bg-white rounded-2xl bg-cover bg-center" 
-                style={{ backgroundImage: "url('/img/portofolio/08-large.jpg')" }}>
+                style={{ backgroundImage: "url('/img/gallery/camset9.jpg')" }}>
               </div>
             </div>
             
             <div className="w-72 h-[400px] bg-white rounded-2xl bg-cover bg-center" 
-              style={{ backgroundImage: "url('/img/portofolio/08-large.jpg')" }}>
+             style={{ backgroundImage: "url('/img/gallery/Home01_2_Historis.jpg')" }}>
             </div>
           </div>
 
           {/* Row 3 - Asimetris: 2 kecil kiri, 1 super wide, 1 medium */}
           <div className="flex flex-wrap justify-center gap-6">
             <div className="w-64 h-72 bg-white rounded-2xl bg-cover bg-center" 
-              style={{ backgroundImage: "url('/img/portofolio/09-large.jpg')" }}>
-            </div>
-            <div className="w-80 h-72 bg-white rounded-2xl bg-cover bg-center" 
-              style={{ backgroundImage: "url('/img/portofolio/10-large.jpg')" }}>
-            </div>
-            <div className="w-[650px] h-72 bg-white rounded-2xl bg-cover bg-center" 
-              style={{ backgroundImage: "url('/img/portofolio/11-large.jpg')" }}>
+              style={{ backgroundImage: "url('/img/gallery/eka01_1.jpg')" }}>
             </div>
             <div className="w-96 h-72 bg-white rounded-2xl bg-cover bg-center" 
-              style={{ backgroundImage: "url('/img/portofolio/12-large.jpg')" }}>
+              style={{ backgroundImage: "url('/img/gallery/combination01_3.jpg')" }}>
+            </div>
+            <div className="w-[470px] h-72 bg-white rounded-2xl bg-cover bg-center bg-no-repeat" 
+              style={{ backgroundImage: "url('/img/gallery/train08_1.jpg')" }}>
+            </div>
+            <div className="w-96 h-72 bg-white rounded-2xl bg-cover bg-center" 
+              style={{ backgroundImage: "url('/img/gallery/diorama32_2.jpg')" }}>
+            </div>
+          </div>
+
+          {/* Row 4 - Asimetris: 5 kotak dengan variasi ekstrem */}
+          <div className="flex flex-wrap justify-center gap-6">
+            <div className="w-96 h-96 bg-white rounded-2xl bg-cover bg-center" 
+                 style={{ backgroundImage: "url('/img/gallery/camSolder01_1.png')" }}>
+            </div>
+            <div className="w-64 h-96 bg-white rounded-2xl bg-cover bg-center" 
+                 style={{ backgroundImage: "url('/img/gallery/dioramaPlanning06_1.png')" }}>
+            </div>
+            <div className="w-[450px] h-96 bg-white rounded-2xl bg-cover bg-center" 
+                 style={{ backgroundImage: "url('/img/gallery/train04_1.png')" }}>
+            </div>
+            <div className="w-80 h-96 bg-white rounded-2xl bg-cover bg-center" 
+                 style={{ backgroundImage: "url('/img/gallery/team09_5.jpg')" }}>
+            </div>
+            <div className="w-72 h-96 bg-white rounded-2xl bg-cover bg-center" 
+                style={{ backgroundImage: "url('/img/gallery/team03_2.jpg')" }}>
             </div>
           </div>
 

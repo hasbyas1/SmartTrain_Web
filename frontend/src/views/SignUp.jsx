@@ -158,7 +158,7 @@ export default function SignUp() {
 
       <div className="md:w-1/2 bg-gray-200">
         <img
-          src="img/intro-bg.png"
+          src="img/login-bg2.jpg"
           alt="Login Illustration"
           className="object-cover w-full h-full"
         />

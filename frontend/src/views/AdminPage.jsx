@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Sidebar from "../components/AdminSidebar";
 import Navbar from "../components/AdminNavbar";
 import axios from "axios";
@@ -28,6 +28,7 @@ export default function AdminDashboard() {
   const [cameraStatus, setCameraStatus] = useState("Loading...");
   const [cameraLoading, setCameraLoading] = useState(false);
   const [cameraError, setCameraError] = useState(false);
+  const streamImgRef = useRef(null); // Ref untuk force disconnect stream
 
 
   // States UI
@@ -65,6 +66,16 @@ export default function AdminDashboard() {
       return () => clearInterval(interval);
     }
   }, [cameraStatus, cameraIP, mqttMessages]);
+
+  // Force disconnect stream saat hide feed
+  useEffect(() => {
+    if (!showFeed && streamImgRef.current) {
+      console.log("🔌 Force disconnecting camera stream...");
+      streamImgRef.current.src = "";
+      // Set ke blank image untuk ensure cleanup
+      streamImgRef.current.src = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
+    }
+  }, [showFeed]);
 
   // Update trainLocation ketika ada message dari MQTT topic location
   useEffect(() => {
@@ -252,7 +263,7 @@ export default function AdminDashboard() {
       // Cooldown 1 detik
       setTimeout(() => {
         setCameraLoading(false);
-      }, 1000); // 1 detik
+      }, 2000); // 2 detik
       
     } catch (err) {
       console.error("Error updating camera:", err);
@@ -596,6 +607,18 @@ export default function AdminDashboard() {
             </div>
           </div>
 
+          {/* Live Camera Description */}
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <div className="border-l-4 border-red-500 pl-4">
+              <h3 className="text-2xl font-bold text-gray-800 mb-3 uppercase">
+                Live Camera
+              </h3>
+              <p className="text-xl text-gray-600 leading-relaxed">
+                Here, you'll see the public camera view from across the land. These cameras are installed at railway crossings to monitor and detect any obstacles or vehicles that may be present on the tracks. The camera feed is processed using advanced computer vision method and techniques to identify and classify objects in real-time, allowing for quick and accurate detection of potential hazards. This information can then be used to trigger safety measures, such as activating warning signals or stopping approaching trains, to prevent accidents and ensure the safety of both train passengers and road users.
+              </p>
+            </div>
+          </div>
+
           {/* Live Camera Stream */}
           <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
             {/* Header dengan Warning Icon */}
@@ -632,9 +655,17 @@ export default function AdminDashboard() {
               <div className="mb-4 flex justify-end">
                 <button
                   onClick={() => {
-                    setShowFeed(!showFeed);
                     if (showFeed) {
-                      setCameraError(false); // Reset error when hiding
+                      // Hide: Force disconnect DULU
+                      if (streamImgRef.current) {
+                        console.log("D83dDd0c Disconnecting stream before hiding...");
+                        streamImgRef.current.src = "";
+                      }
+                      setCameraError(false);
+                      setShowFeed(false);
+                    } else {
+                      // Show: Langsung show
+                      setShowFeed(true);
                     }
                   }}
                   className={`flex items-center gap-3 px-8 py-4 rounded-lg text-2xl font-bold transition-all duration-200 shadow-sm ${
@@ -679,6 +710,7 @@ export default function AdminDashboard() {
                     ) : (
                       <img
                         key={`camera-stream-${cameraIP}-${showFeed}`}
+                        ref={streamImgRef}
                         src={`http://${cameraIP}/stream`}
                         alt="Live Camera Feed"
                         className="w-full h-full object-contain"
@@ -769,18 +801,6 @@ export default function AdminDashboard() {
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Live Camera Description */}
-          <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-            <div className="border-l-4 border-red-500 pl-4">
-              <h3 className="text-xl font-bold text-gray-800 mb-3 uppercase">
-                Live Camera
-              </h3>
-              <p className="text-gray-600 leading-relaxed">
-                Here, you'll see the public camera view from across the land. These cameras are installed at railway crossings to monitor and detect any obstacles or vehicles that may be present on the tracks. The camera feed is processed using advanced computer vision method and techniques to identify and classify objects in real-time, allowing for quick and accurate detection of potential hazards. This information can then be used to trigger safety measures, such as activating warning signals or stopping approaching trains, to prevent accidents and ensure the safety of both train passengers and road users.
-              </p>
-            </div>
           </div>
 
           {/* Train Map */}
