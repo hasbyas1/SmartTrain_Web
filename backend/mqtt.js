@@ -1,5 +1,5 @@
 // ==========================================
-// 🔧 Konfigurasi MQTT HiveMQ Cloud
+// Konfigurasi MQTT HiveMQ Cloud
 // IN-MEMORY VERSION - Data real-time tanpa simpan database
 // ==========================================
 const mqtt = require("mqtt");
@@ -18,7 +18,7 @@ const topicBarrier = "smartTrain/barrier";
 const topicCamera = "smartTrain/camera";
 
 // ==========================================
-// 🧠 IN-MEMORY STORAGE (tidak di database)
+// IN-MEMORY STORAGE (tidak di database)
 // ==========================================
 let currentLocation = { titik: "Unknown", timestamp: null };
 let currentSegmentSpeed = { id: null, speed: null, timestamp: null };
@@ -28,7 +28,7 @@ module.exports.getLocationData = () => currentLocation;
 module.exports.getSegmentData = () => currentSegmentSpeed;
 
 // ==========================================
-// 🧠 Cache & Queue System
+// Cache & Queue System
 // ==========================================
 const lastRealtimeCache = new Map();
 let barrierQueue = Promise.resolve();
@@ -41,7 +41,7 @@ let lastBarrierStatus = null;
 let lastCameraStatus = null;
 
 // ==========================================
-// 🚀 MQTT Connect
+// MQTT Connect
 // ==========================================
 const mqttClient = mqtt.connect(mqttServer, {
   username: mqttUser,
@@ -50,12 +50,12 @@ const mqttClient = mqtt.connect(mqttServer, {
 });
 
 mqttClient.on("connect", () => {
-  console.log("📡 Terhubung ke HiveMQ!");
+  console.log("Terhubung ke HiveMQ!");
   mqttClient.subscribe(
     [topicSpeedometer, topicTelemetry, topicLocation, topicBarrier, topicCamera],
     (err) => {
       if (!err) {
-        console.log("✅ Subscribe berhasil:");
+        console.log("Subscribe berhasil:");
         console.log(" - " + topicSpeedometer);
         console.log(" - " + topicTelemetry);
         console.log(" - " + topicLocation);
@@ -67,7 +67,7 @@ mqttClient.on("connect", () => {
 });
 
 // ==========================================
-// 📥 MQTT Message Handler
+// MQTT Message Handler
 // ==========================================
 mqttClient.on("message", async (topic, message) => {
   try {
@@ -75,7 +75,7 @@ mqttClient.on("message", async (topic, message) => {
     const timestamp = new Date();
 
     // ======================================================
-    // 🚆 SPEEDOMETER
+    // SPEEDOMETER
     // ======================================================
     if (topic === topicSpeedometer) {
       // Tipe "segmen" - SIMPAN DI MEMORY SAJA
@@ -90,13 +90,13 @@ mqttClient.on("message", async (topic, message) => {
           timestamp: timestamp
         };
 
-        console.log(`📊 SEGMEN ${segmentId} → ${speed} cm/s (in-memory only)`);
+        console.log(`SEGMEN ${segmentId} > ${speed} cm/s (in-memory only)`);
       }
       // Tipe "rata_rata" - SIMPAN KE DATABASE
       else if (data.tipe === "rata_rata") {
         const avgSpeed = data.kecepatan_r;
 
-        console.log(`📥 RATA-RATA → ${avgSpeed} cm/s`);
+        console.log(`RATA-RATA > ${avgSpeed} cm/s`);
 
         try {
           await sequelize.query(
@@ -105,9 +105,9 @@ mqttClient.on("message", async (topic, message) => {
               replacements: [avgSpeed, timestamp],
             }
           );
-          console.log("💾 RATA-RATA tersimpan ke DB!");
+          console.log("RATA-RATA tersimpan ke DB!");
         } catch (err) {
-          console.error("❌ Error insert rata-rata:", err);
+          console.error("Error insert rata-rata:", err);
         }
       }
 
@@ -115,7 +115,7 @@ mqttClient.on("message", async (topic, message) => {
     }
 
     // ======================================================
-    // 🚆 TELEMETRY_BATCH - SIMPAN KE DATABASE
+    // TELEMETRY_BATCH - SIMPAN KE DATABASE
     // ======================================================
     if (topic === topicTelemetry) {
       if (!data.speed || typeof data.speed !== "object") return;
@@ -147,16 +147,16 @@ mqttClient.on("message", async (topic, message) => {
           }
         );
 
-        console.log(`📈 Telemetry saved: ${inserts.length} segments`);
+        console.log(`Telemetry saved: ${inserts.length} segments`);
       } catch (err) {
-        console.error("❌ Telemetry insert error:", err);
+        console.error("Telemetry insert error:", err);
       }
 
       return;
     }
 
     // ======================================================
-    // 📍 LOCATION - SIMPAN DI MEMORY SAJA
+    // LOCATION - SIMPAN DI MEMORY SAJA
     // ======================================================
     if (topic === topicLocation) {
       const titik = data.titik;
@@ -167,20 +167,20 @@ mqttClient.on("message", async (topic, message) => {
         timestamp: timestamp
       };
 
-      console.log(`📍 LOCATION: ${titik} (in-memory only)`);
+      console.log(`LOCATION: ${titik} (in-memory only)`);
       return;
     }
 
     // ======================================================
-    // 🚧 BARRIER (PALANG) - SIMPAN KE DATABASE
+    // BARRIER (PALANG) - SIMPAN KE DATABASE
     // ======================================================
     if (topic === topicBarrier) {
       const currentStatus = data.status;
 
-      console.log(`📥 BARRIER request received: ${currentStatus}`);
+      console.log(`BARRIER request received: ${currentStatus}`);
 
       if (isBarrierProcessing) {
-        console.log(`⚠️ BARRIER: Already processing, request IGNORED`);
+        console.log(`BARRIER: Already processing, request IGNORED`);
         return;
       }
 
@@ -192,7 +192,7 @@ mqttClient.on("message", async (topic, message) => {
 
           if (currentStatus === lastBarrierStatus) {
             console.log(
-              `⚠️ BARRIER: Status sama dengan cache (${currentStatus}), SKIP`
+              `BARRIER: Status sama dengan cache (${currentStatus}), SKIP`
             );
             return;
           }
@@ -206,14 +206,14 @@ mqttClient.on("message", async (topic, message) => {
             lastRecord[0].status === currentStatus
           ) {
             console.log(
-              `⚠️ BARRIER: Status sama dengan DB (${currentStatus}), SKIP`
+              `BARRIER: Status sama dengan DB (${currentStatus}), SKIP`
             );
             lastBarrierStatus = currentStatus;
             return;
           }
 
           console.log(
-            `🚧 BARRIER: Insert status ${currentStatus} at ${timestamp.toISOString()}`
+            `BARRIER: Insert status ${currentStatus} at ${timestamp.toISOString()}`
           );
 
           await sequelize.query(
@@ -223,10 +223,10 @@ mqttClient.on("message", async (topic, message) => {
             }
           );
 
-          console.log("💾 BARRIER inserted successfully!");
+          console.log("BARRIER inserted successfully!");
           lastBarrierStatus = currentStatus;
         } catch (err) {
-          console.error("❌ BARRIER queue error:", err);
+          console.error("BARRIER queue error:", err);
         } finally {
           isBarrierProcessing = false;
         }
@@ -236,15 +236,15 @@ mqttClient.on("message", async (topic, message) => {
     }
 
     // ======================================================
-    // 📸 CAMERA - SIMPAN KE DATABASE
+    // CAMERA - SIMPAN KE DATABASE
     // ======================================================
     if (topic === topicCamera) {
       const currentStatus = data.status;
 
-      console.log(`📥 CAMERA request received: ${currentStatus}`);
+      console.log(`CAMERA request received: ${currentStatus}`);
 
       if (isCameraProcessing) {
-        console.log(`⚠️ CAMERA: Already processing, request IGNORED`);
+        console.log(`CAMERA: Already processing, request IGNORED`);
         return;
       }
 
@@ -256,7 +256,7 @@ mqttClient.on("message", async (topic, message) => {
 
           if (currentStatus === lastCameraStatus) {
             console.log(
-              `⚠️ CAMERA: Status sama dengan cache (${currentStatus}), SKIP`
+              `CAMERA: Status sama dengan cache (${currentStatus}), SKIP`
             );
             return;
           }
@@ -270,14 +270,14 @@ mqttClient.on("message", async (topic, message) => {
             lastRecord[0].status === currentStatus
           ) {
             console.log(
-              `⚠️ CAMERA: Status sama dengan DB (${currentStatus}), SKIP`
+              `CAMERA: Status sama dengan DB (${currentStatus}), SKIP`
             );
             lastCameraStatus = currentStatus;
             return;
           }
 
           console.log(
-            `📸 CAMERA: Insert status ${currentStatus} at ${timestamp.toISOString()}`
+            `CAMERA: Insert status ${currentStatus} at ${timestamp.toISOString()}`
           );
 
           await sequelize.query(
@@ -287,10 +287,10 @@ mqttClient.on("message", async (topic, message) => {
             }
           );
 
-          console.log("💾 CAMERA inserted successfully!");
+          console.log("CAMERA inserted successfully!");
           lastCameraStatus = currentStatus;
         } catch (err) {
-          console.error("❌ CAMERA queue error:", err);
+          console.error("CAMERA queue error:", err);
         } finally {
           isCameraProcessing = false;
         }
@@ -299,21 +299,21 @@ mqttClient.on("message", async (topic, message) => {
       return;
     }
   } catch (err) {
-    console.error("⚠️ Error parsing MQTT message:", err);
+    console.error("Error parsing MQTT message:", err);
     console.error("Topic:", topic);
     console.error("Message:", message.toString());
   }
 });
 
 // ==========================================
-// 🔌 Error & Close Handlers
+// Error & Close Handlers
 // ==========================================
 mqttClient.on("error", (err) => {
-  console.error("❌ MQTT Error:", err);
+  console.error("MQTT Error:", err);
 });
 
 mqttClient.on("close", () => {
-  console.log("🔌 MQTT Connection closed");
+  console.log("MQTT Connection closed");
 });
 
 module.exports = mqttClient;

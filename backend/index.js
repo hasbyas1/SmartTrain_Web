@@ -3,7 +3,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { sequelize, User } = require("./models");
 const cors = require("cors");
-const axios = require("axios"); // ← TAMBAHKAN INI untuk camera stream
+const axios = require("axios");
 require("dotenv").config();
 
 const mqttClient = require("./mqtt");
@@ -15,7 +15,7 @@ app.use(express.json());
 const SECRET = process.env.JWT_SECRET || "SUPER_SECRET_JWT_UBAH_INI";
 
 // ==========================================
-// 🏠 HOME ROUTE
+// HOME ROUTE
 // ==========================================
 app.get("/", (req, res) => {
   res.status(200).json({
@@ -30,13 +30,13 @@ app.get("/", (req, res) => {
         "/train/segment (NEW - from MQTT)"
       ],
       palang: ["/palang", "/palang/update"],
-      camera: ["/camera", "/camera/update", "/camera/stream (NEW - Live Stream)"], // ← UPDATE INI
+      camera: ["/camera", "/camera/update", "/camera/stream (NEW - Live Stream)"],
     },
   });
 });
 
 // ==========================================
-// 🔐 AUTHENTICATION ROUTES
+// AUTHENTICATION ROUTES
 // ==========================================
 
 // Register
@@ -63,10 +63,10 @@ app.post("/auth/register", async (req, res) => {
       password: hashedPassword,
     });
 
-    console.log("✅ User created successfully! ID:", newUser.id);
+    console.log("User created successfully! ID:", newUser.id);
     res.status(201).json({ message: "Register success" });
   } catch (error) {
-    console.error("❌ REGISTRATION ERROR:", error);
+    console.error("REGISTRATION ERROR:", error);
     res.status(500).json({ message: "Register failed" });
   }
 });
@@ -102,7 +102,7 @@ app.post("/auth/login", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("❌ LOGIN ERROR:", error);
+    console.error("LOGIN ERROR:", error);
     res.status(500).json({ message: "Login failed" });
   }
 });
@@ -120,13 +120,13 @@ app.get("/auth/user/:id", async (req, res) => {
 
     res.json(user);
   } catch (error) {
-    console.error("❌ GET USER ERROR:", error);
+    console.error("GET USER ERROR:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 });
 
 // ==========================================
-// 🚆 TRAIN SPEED ROUTES
+// TRAIN SPEED ROUTES
 // ==========================================
 
 // Get Latest Train Speed (Rata-rata) dari DATABASE
@@ -211,7 +211,7 @@ app.get("/train/realtime", async (req, res) => {
 });
 
 // ==========================================
-// 📍 TRAIN LOCATION (NEW - dari MQTT in-memory)
+// TRAIN LOCATION (NEW - dari MQTT in-memory)
 // ==========================================
 app.get("/train/location", (req, res) => {
   try {
@@ -233,7 +233,7 @@ app.get("/train/location", (req, res) => {
 });
 
 // ==========================================
-// 🚆 TRAIN SEGMENT SPEED (NEW - dari MQTT in-memory)
+// TRAIN SEGMENT SPEED (NEW - dari MQTT in-memory)
 // ==========================================
 app.get("/train/segment", (req, res) => {
   try {
@@ -256,7 +256,7 @@ app.get("/train/segment", (req, res) => {
 });
 
 // ==========================================
-// 🚧 PALANG (BARRIER) ROUTES
+// PALANG (BARRIER) ROUTES
 // ==========================================
 
 // Get Latest Palang Status
@@ -281,14 +281,14 @@ app.get("/palang", async (req, res) => {
 app.post("/palang/update", (req, res) => {
   const { status } = req.body;
 
-  console.log(`📤 Publishing palang status: ${status}`);
+  console.log(`Publishing palang status: ${status}`);
   mqttClient.publish("smartTrain/barrier", JSON.stringify({ status }));
 
   res.json({ success: true });
 });
 
 // ==========================================
-// 📸 CAMERA ROUTES
+// CAMERA ROUTES
 // ==========================================
 
 // Get Latest Camera Status
@@ -313,20 +313,20 @@ app.get("/camera", async (req, res) => {
 app.post("/camera/update", (req, res) => {
   const { status } = req.body;
 
-  console.log(`📤 Publishing camera status: ${status}`);
+  console.log(`Publishing camera status: ${status}`);
   mqttClient.publish("smartTrain/camera", JSON.stringify({ status }));
 
   res.json({ success: true });
 });
 
 // ==========================================
-// 📹 CAMERA STREAM (NEW - Live Stream Relay)
+// CAMERA STREAM (NEW - Live Stream Relay)
 // ==========================================
 app.get("/camera/stream", async (req, res) => {
   const CAMERA_URL = process.env.CAMERA_URL || "http://192.168.1.187/stream";
   
   try {
-    console.log(`📹 Relaying camera stream from ${CAMERA_URL}`);
+    console.log(`Relaying camera stream from ${CAMERA_URL}`);
     
     // Fetch stream dari ESP32-CAM
     const response = await axios({
@@ -348,18 +348,18 @@ app.get("/camera/stream", async (req, res) => {
 
     // Handle stream errors
     response.data.on('error', (error) => {
-      console.error('❌ Camera stream error:', error.message);
+      console.error('Camera stream error:', error.message);
       res.end();
     });
 
     // Handle client disconnect
     req.on('close', () => {
-      console.log('🔌 Client disconnected from camera stream');
+      console.log('Client disconnected from camera stream');
       response.data.destroy();
     });
 
   } catch (error) {
-    console.error('❌ Camera stream relay error:', error.message);
+    console.error('Camera stream relay error:', error.message);
     res.status(503).json({ 
       error: 'Camera stream unavailable',
       message: error.message 
@@ -368,23 +368,23 @@ app.get("/camera/stream", async (req, res) => {
 });
 
 // ==========================================
-// 🚀 START SERVER
+// START SERVER
 // ==========================================
 const PORT = process.env.PORT || 5000;
 
 sequelize
   .authenticate()
   .then(() => {
-    console.log("✅ Database connected!");
+    console.log("Database connected!");
 
     app.listen(PORT, "0.0.0.0", () => {
-      console.log(`🚀 Server running at http://0.0.0.0:${PORT}`);
-      console.log("📡 MQTT client initialized and listening...");
-      console.log("💾 Real-time data: Location & Segment (in-memory)");
-      console.log("💾 Database data: Speed History, Realtime, Palang, Camera");
-      console.log("📹 Camera stream relay: READY"); // ← TAMBAH LOG INI
+      console.log(`Server running at http://0.0.0.0:${PORT}`);
+      console.log("MQTT client initialized and listening...");
+      console.log("Real-time data: Location & Segment (in-memory)");
+      console.log("Database data: Speed History, Realtime, Palang, Camera");
+      console.log("Camera stream relay: READY");
     });
   })
   .catch((err) => {
-    console.error("❌ Unable to connect to database:", err);
+    console.error("Unable to connect to database:", err);
   });
