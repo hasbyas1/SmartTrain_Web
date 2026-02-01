@@ -37,7 +37,7 @@ export default function AdminDashboard() {
   const [timeFilter, setTimeFilter] = useState("1m");
 
   // ==========================================
-  // 📡 MQTT CONNECTION - untuk Kecepatan Per Segmen & Keberadaan Kereta
+  // MQTT CONNECTION - untuk Kecepatan Per Segmen & Keberadaan Kereta
   // ==========================================
   const { messages: mqttMessages, isConnected: isMQTTConnected } = useMQTT(MQTT_TOPICS);
 
@@ -47,7 +47,7 @@ export default function AdminDashboard() {
     if (msg && msg.ip) {
       // SAMA SEPERTI MOBILE: Langsung set apapun yang diterima!
       setCameraIP(msg.ip);
-      console.log("📷 Camera IP from MQTT:", msg.ip);
+      console.log("Camera IP from MQTT:", msg.ip);
     }
   }, [JSON.stringify(mqttMessages["smartTrain/camera/ip"])]);
 
@@ -56,10 +56,10 @@ export default function AdminDashboard() {
     if (cameraStatus === "Aktif" && (cameraIP === "waiting..." || cameraIP === "offline" || !cameraIP)) {
       const interval = setInterval(() => {
         const msg = mqttMessages["smartTrain/camera/ip"];
-        console.log("🔄 Auto-checking IP... Current:", msg?.ip || "null");
+        console.log("Auto-checking IP... Current:", msg?.ip || "null");
         if (msg && msg.ip && msg.ip !== "waiting..." && msg.ip !== "offline") {
           setCameraIP(msg.ip);
-          console.log("✅ Got valid IP:", msg.ip);
+          console.log("Got valid IP:", msg.ip);
         }
       }, 3000);
       
@@ -70,7 +70,7 @@ export default function AdminDashboard() {
   // Force disconnect stream saat hide feed
   useEffect(() => {
     if (!showFeed && streamImgRef.current) {
-      console.log("🔌 Force disconnecting camera stream...");
+      console.log("Force disconnecting camera stream...");
       streamImgRef.current.src = "";
       // Set ke blank image untuk ensure cleanup
       streamImgRef.current.src = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
@@ -83,7 +83,7 @@ export default function AdminDashboard() {
     if (msg) {
       // Gunakan timestamp baru setiap message agar state selalu update
       setTrainLocation({ ...msg, _ts: Date.now() });
-      console.log("📍 Train Location updated from MQTT:", msg);
+      console.log("Train Location updated from MQTT:", msg);
     }
   }, [JSON.stringify(mqttMessages["smartTrain/location"])]);
 
@@ -98,12 +98,12 @@ export default function AdminDashboard() {
         timestamp: new Date().toISOString(),
         _ts: Date.now()
       });
-      console.log("📊 Segment Speed updated from MQTT:", data);
+      console.log("Segment Speed updated from MQTT:", data);
     }
   }, [JSON.stringify(mqttMessages["smartTrain/speedometer"])]);
 
   // ==========================================
-  // 📡 FETCH DATA FROM API
+  // FETCH DATA FROM API
   // ==========================================
 
   // Fetch Speed History (Rata-rata untuk grafik)
@@ -197,8 +197,8 @@ export default function AdminDashboard() {
     }
   };
 
-  // ❌ DIHAPUS: Fetch Train Location - SEKARANG DARI MQTT LANGSUNG
-  // ❌ DIHAPUS: Fetch Segment Speed - SEKARANG DARI MQTT LANGSUNG
+  // DIHAPUS: Fetch Train Location - SEKARANG DARI MQTT LANGSUNG
+  // DIHAPUS: Fetch Segment Speed - SEKARANG DARI MQTT LANGSUNG
 
   // Fetch Palang Status
   const fetchPalangStatus = async () => {
@@ -273,7 +273,7 @@ export default function AdminDashboard() {
   };
 
   // ==========================================
-  // 🔄 AUTO REFRESH DATA
+  // AUTO REFRESH DATA
   // ==========================================
 
   useEffect(() => {
@@ -283,8 +283,8 @@ export default function AdminDashboard() {
         await Promise.all([
           fetchSpeedHistory(timeFilter),
           fetchRealtimeSpeed(),
-          // ❌ DIHAPUS: fetchTrainLocation() - SEKARANG DARI MQTT
-          // ❌ DIHAPUS: fetchSegmentSpeed() - SEKARANG DARI MQTT
+          // DIHAPUS: fetchTrainLocation() - SEKARANG DARI MQTT
+          // DIHAPUS: fetchSegmentSpeed() - SEKARANG DARI MQTT
           fetchPalangStatus(),
           fetchCameraStatus(),
         ]);
@@ -302,8 +302,8 @@ export default function AdminDashboard() {
     const interval = setInterval(() => {
       fetchSpeedHistory(timeFilter); // Refresh grafik rata-rata
       fetchRealtimeSpeed(); // Refresh grafik realtime
-      // ❌ DIHAPUS: fetchTrainLocation() - SEKARANG DARI MQTT REAL-TIME
-      // ❌ DIHAPUS: fetchSegmentSpeed() - SEKARANG DARI MQTT REAL-TIME
+      // DIHAPUS: fetchTrainLocation() - SEKARANG DARI MQTT REAL-TIME
+      // DIHAPUS: fetchSegmentSpeed() - SEKARANG DARI MQTT REAL-TIME
       fetchPalangStatus(); // Refresh palang
       fetchCameraStatus(); // Refresh camera
     }, 3000);
@@ -312,7 +312,7 @@ export default function AdminDashboard() {
   }, [timeFilter]); // Re-run when filter changes
 
   // ==========================================
-  // 🎨 RENDER UI
+  // RENDER UI
   // ==========================================
 
   if (loading) {
@@ -686,7 +686,7 @@ export default function AdminDashboard() {
               style={{ height: '575px' }}
             >
               {cameraStatus === "Aktif" ? (
-                cameraIP && cameraIP !== "waiting..." && cameraIP !== "offline" ? (  // ← DIGANTI!
+                cameraIP && cameraIP !== "waiting..." && cameraIP !== "offline" ? (  // DIGANTI!
                   showFeed ? (
                     // ===== SHOW FEED - Display Stream =====
                     cameraError ? (
@@ -715,11 +715,11 @@ export default function AdminDashboard() {
                         alt="Live Camera Feed"
                         className="w-full h-full object-contain"
                         onError={() => {
-                          console.error("❌ Camera stream error from:", cameraIP);
+                          console.error("Camera stream error from:", cameraIP);
                           setCameraError(true);
                         }}
                         onLoad={() => {
-                          console.log("✅ Camera stream loaded successfully from:", cameraIP);
+                          console.log("Camera stream loaded successfully from:", cameraIP);
                           setCameraError(false);
                         }}
                       />

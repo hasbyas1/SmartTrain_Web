@@ -41,9 +41,9 @@ REACT_APP_MQTT_PASSWORD=Device02
   
   fs.writeFileSync(envPath, envContent);
   
-  console.log('\n✅ File .env berhasil dibuat otomatis!');
-  console.log(`📡 IP Lokal terdeteksi: ${localIP}`);
-  console.log(`🔗 Backend API URL: ${apiUrl}\n`);
+  console.log('\nFile .env berhasil dibuat otomatis!');
+  console.log(`IP Lokal terdeteksi: ${localIP}`);
+  console.log(`Backend API URL: ${apiUrl}\n`);
 }
 
 // Jalankan

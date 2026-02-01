@@ -13,7 +13,7 @@ export const Navigation = () => {
 
   const menuItems = [
     { name: "Features", href: "#features" },
-    // ❌ DIHAPUS: { name: "Live Camera", href: "#about" },
+    // DIHAPUS: { name: "Live Camera", href: "#about" },
     { name: "Gallery", href: "#services" },
     { name: "Team", href: "#team" },
     { name: "Contact", href: "#contact" },

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Navigation } from "../components/navigation";
 import { Header } from "../components/header";
 import { Features } from "../components/features";
-// import { About } from "../components/about"; // ← DIHAPUS: Live Camera section
+// import { About } from "../components/about"; // DIHAPUS: Live Camera section
 import { Services } from "../components/services";
 // import { Gallery } from "../components/gallery";
 // import { Testimonials } from "../components/testimonials";
@@ -28,7 +28,7 @@ export default function LandingPage() {
       <Navigation />
       <Header data={landingPageData.Header} />
       <Features data={landingPageData.Features} />
-      {/* ❌ DIHAPUS: Live Camera Section */}
+      {/* DIHAPUS: Live Camera Section */}
       {/* <About data={landingPageData.About} /> */}
       <Services data={landingPageData.Services} />
       {/* <Gallery data={landingPageData.Gallery} /> */}
