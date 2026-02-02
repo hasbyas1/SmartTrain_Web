@@ -287,7 +287,7 @@ a:focus,
   display: table;
   width: 100%;
   padding: 0;
-  background: url(../img/intro-bg1.jpg) center center no-repeat;
+  background: url(../img/gallery/intro-bg1.jpg) center center no-repeat;
   background-color: rgba(0, 0, 0, 0.2); /* Black with 70% opacity */
   background-blend-mode: darken;
   -webkit-background-size: cover;

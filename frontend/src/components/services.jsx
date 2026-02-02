@@ -38,7 +38,7 @@ export const Services = (props) => {
                 style={{ backgroundImage: "url('/img/gallery/camset03_2.jpg')" }}>
               </div>
               <div className="w-80 h-[190px] bg-transparent rounded-2xl bg-cover bg-center" 
-                style={{ backgroundImage: "url('/img/gallery/Logo01_2.png')" }}>
+                style={{ backgroundImage: "url('/img/gallery/LogoB01_2.png')" }}>
               </div>
             </div>
             <div className="flex flex-col gap-6">
