@@ -163,7 +163,7 @@ export default function Login() {
       {/* Right section: image */}
       <div className="md:w-1/2 bg-gray-200">
         <img
-          src="img/login-bg2.jpg"
+          src="img/gallery/login-bg2.jpg"
           alt="Login Illustration"
           className="object-cover w-full h-full"
         />
